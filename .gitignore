@@ -98,3 +98,13 @@ htmlcov/
 *.swp
 *.bak
 *.cache
+
+
+.serena/
+.specify/
+specs/
+.claude/
+Z.ai.ps1
+CLAUDE.md
+IMPLEMENTATION_COMPLETE.md
+unified-voice-assistant-prompt.md
