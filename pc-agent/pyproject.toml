@@ -1,0 +1,252 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pc-control-agent"
+version = "1.0.0"
+description = "Voice-controlled PC assistant backend agent"
+authors = [
+    {name = "PC Control Team", email = "team@pccontrol.dev"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "websockets>=12.0",
+
+    # Audio Processing
+    "whisper.cpp>=1.0",
+    "python-multipart>=0.0.6",
+
+    # Security & Authentication
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "cryptography>=41.0.0",
+
+    # Database
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.19.0",
+
+    # MCP Integration
+    "mcp>=1.0.0",
+    "mcp-windows-ops>=1.0.0",
+    "mcp-chrome-devtools>=1.0.0",
+
+    # Utilities
+    "pydantic>=2.4.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "psutil>=5.9.0",
+    "cffi>=1.16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.25.0",
+    "ruff>=0.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+pc-agent = "pc_agent.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # flake8-unused-arguments
+    "ARG",
+    # flake8-comprehensions
+    "C4",
+    # flake8-datetimez
+    "DTZ",
+    # flake8-tidy-imports
+    "TID",
+    # flake8-type-checking
+    "TCH",
+    # isort
+    "I",
+    # mccabe
+    "C90",
+    # pep8-naming
+    "N",
+    # pydocstyle
+    "D",
+    # flake8-quotes
+    "Q",
+    # flake8-bandit (security)
+    "S",
+]
+ignore = [
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in public class
+    "D101",
+    # Missing docstring in public method
+    "D102",
+    # Missing docstring in public function
+    "D103",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in magic method
+    "D105",
+    # Missing docstring in __init__
+    "D107",
+    # flake8-bandit: Use of assert detected
+    "S101",
+    # flake8-bandit: Hardcoded password
+    "S105",
+    # flake8-bandit: Standard library HTTP call
+    "S113",
+]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.isort]
+known-first-party = ["src"]
+
+# Black configuration
+[tool.black]
+target-version = ['py310']
+line-length = 100
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "whisper.cpp.*",
+    "psutil.*",
+    "cffi.*",
+]
+ignore_missing_imports = true
+
+# pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security-related",
+    "contract: marks tests as contract tests",
+]
+asyncio_mode = "auto"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

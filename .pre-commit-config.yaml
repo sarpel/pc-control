@@ -1,0 +1,123 @@
+# Pre-commit hooks for PC Control voice assistant
+# Install with: pre-commit install
+
+repos:
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+
+  # Python code quality
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Python type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  # Security scanning
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, pc-agent/src/, -f, json, -o, bandit-report.json]
+        pass_filenames: false
+
+  # Python dependency security
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+        files: pc-agent/requirements.*\.txt$
+
+  # Secret scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # Android Kotlin formatting and linting
+  - repo: https://github.com/detekt/detekt
+    rev: v1.23.0
+    hooks:
+      - id: detekt
+        files: android/.*\.kt$
+        args: [--config, android/detekt.yml, --build-upon-default-config]
+        pass_filenames: false
+
+  # Kotlin formatting
+  - repo: https://github.com/pinterest/ktlint
+    rev: 0.50.0
+    hooks:
+      - id: ktlint
+        files: android/.*\.kt$
+        args: ['--android', 'false']
+
+  # Gradle wrapper validation
+  - repo: https://github.com/dsanders11/pre-commit-hooks
+    rev: v0.1.1
+    hooks:
+      - id: validate-gradle-wrapper
+        files: android/gradle/wrapper/.*\.jar$
+
+  # Shell script security
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+        files: \.(sh|bash|ksh)$
+
+  # Terraform security (if we add infra later)
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.81.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_tflint
+        args: ['--args=--only=terraform_security_rules']
+        files: \.tf$
+
+# Configure CI
+default_stages: [commit, push]
+fail_fast: true
+
+# Additional configuration
+default_language_version:
+  python: python3.10
+
+# Excluded files and patterns
+exclude: |
+  (?x)^(
+    \.git/.*|
+    \.idea/.*|
+    \.vscode/.*|
+    node_modules/.*|
+    build/.*|
+    dist/.*|
+    target/.*|
+    \.gradle/.*|
+    .*\.orig|
+    .*\.rej
+  )$

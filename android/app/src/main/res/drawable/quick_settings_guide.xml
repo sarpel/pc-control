@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="600dp"
+    android:viewportWidth="400"
+    android:viewportHeight="600">
+
+    <!-- Background -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M0,0h400v600h-400z" />
+
+    <!-- Header Background -->
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M0,0h400v80h-400z" />
+
+    <!-- Title Text Background (simulated) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M50,20h300v40h-300z" />
+
+    <!-- Microphone Icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M200,30 m-15,0 a15,15 0,1,1 30,0 a15,15 0,1,1 -30,0
+                           M185,40 l0,10
+                           M170,35 l30,10
+                           M170,45 l30,-10" />
+
+    <!-- Step 1: Add to Quick Settings -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeColor="#333333"
+        android:pathData="M30,120 h40 a10,10 0,0,1 10,10 v30 a10,10 0,0,1 -10,10 h-40 a10,10 0,0,1 -10,-10 v-30 a10,10 0,0,1 10,-10 z" />
+
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M50,125 m-8,0 a8,8 0,1,1 16,0 a8,8 0,1,1 -16,0
+                           M46,129 l4,4 l8,-8" />
+
+    <!-- Step 1 Content -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M90,125 h280 v8 h-280 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,140 h250 v4 h-250 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,148 h240 v4 h-240 z" />
+
+    <!-- Arrow 1 -->
+    <path
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"
+        android:pathData="M200,170 l0,20" />
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M195,185 l5,10 l5,-10 z" />
+
+    <!-- Step 2: Connect to PC -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeColor="#333333"
+        android:pathData="M30,220 h40 a10,10 0,0,1 10,10 v30 a10,10 0,0,1 -10,10 h-40 a10,10 0,0,1 -10,-10 v-30 a10,10 0,0,1 10,-10 z" />
+
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M50,225 m-8,0 a8,8 0,1,1 16,0 a8,8 0,1,1 -16,0" />
+
+    <!-- Step 2 Content -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M90,225 h280 v8 h-280 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,240 h250 v4 h-250 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,248 h260 v4 h-260 z" />
+
+    <!-- PC Icon -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M320,240 h40 v30 h-40z" />
+    <path
+        android:fillColor="#333333"
+        android:pathData="M325,270 h30 v5 h-30z" />
+    <path
+        android:fillColor="#333333"
+        android:pathData="M330,275 h20 v3 h-20z" />
+
+    <!-- Arrow 2 -->
+    <path
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"
+        android:pathData="M200,270 l0,20" />
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M195,285 l5,10 l5,-10 z" />
+
+    <!-- Step 3: Use Voice Commands -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeColor="#333333"
+        android:pathData="M30,320 h40 a10,10 0,0,1 10,10 v30 a10,10 0,0,1 -10,10 h-40 a10,10 0,0,1 -10,-10 v-30 a10,10 0,0,1 10,-10 z" />
+
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M50,325 m-8,0 a8,8 0,1,1 16,0 a8,8 0,1,1 -16,0" />
+
+    <!-- Step 3 Content -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M90,325 h280 v8 h-280 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,340 h250 v4 h-250 z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M90,348 h240 v4 h-240 z" />
+
+    <!-- Sound Waves -->
+    <path
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"
+        android:pathData="M320,340 c0,-8 4,-12 8,-12 c4,0 8,4 8,12" />
+    <path
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"
+        android:pathData="M330,335 c0,-12 6,-18 12,-18 c6,0 12,6 12,18" />
+
+    <!-- Example Commands Box -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:strokeWidth="1"
+        android:strokeColor="#2196F3"
+        android:pathData="M30,400 h340 v120 h-340z" />
+
+    <!-- Example Commands Title -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M50,420 h120 v6 h-120z" />
+
+    <!-- Example Commands List -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M50,445 h250 v4 h-250z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M60,460 h200 v3 h-200z" />
+
+    <path
+        android:fillColor="#333333"
+        android:pathData="M50,475 h250 v4 h-250z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M60,490 h200 v3 h-200z" />
+
+    <path
+        android:fillColor="#333333"
+        android:pathData="M50,505 h250 v4 h-250z" />
+    <path
+        android:fillColor="#666666"
+        android:pathData="M60,520 h180 v3 h-180z" />
+
+    <!-- Tips Box -->
+    <path
+        android:fillColor="#FFF3E0"
+        android:strokeWidth="1"
+        android:strokeColor="#FF9800"
+        android:pathData="M30,540 h340 v50 h-340z" />
+
+    <!-- Tips Icon -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M50,555 m-8,0 a8,8 0,1,1 16,0 a8,8 0,1,1 -16,0
+                           M50,550 l0,8
+                           M46,565 h8" />
+
+    <!-- Tips Content -->
+    <path
+        android:fillColor="#E65100"
+        android:pathData="M80,555 h250 v4 h-250z" />
+    <path
+        android:fillColor="#F57C00"
+        android:pathData="M80,565 h230 v3 h-230 z" />
+    <path
+        android:fillColor="#F57C00"
+        android:pathData="M80,572 h240 v3 h-240 z" />
+
+    <!-- Footer -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M0,590 h400 v10 h-400z" />
+
+    <!-- Footer Text -->
+    <path
+        android:fillColor="#757575"
+        android:pathData="M100,595 h200 v3 h-200z" />
+
+</vector>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PC Voice Controller</string>
+
+    <!-- Main UI -->
+    <string name="voice_command_title">Sesli Komut</string>
+    <string name="start_listening">Dinle</string>
+    <string name="stop_listening">Durdur</string>
+    <string name="listening">Dinleniyor...</string>
+    <string name="speak_now">Konuşun</string>
+
+    <!-- Connection Status -->
+    <string name="connected">Bağlı</string>
+    <string name="disconnected">Bağlı Değil</string>
+    <string name="connecting">Bağlanıyor...</string>
+    <string name="pair_device">Cihaz Eşleştir</string>
+    <string name="pc_connected">PC\'ye Bağlı</string>
+    <string name="pc_not_connected">PC\'ye Bağlı Değil</string>
+
+    <!-- Device Pairing -->
+    <string name="pairing_title">Cihaz Eşleştirme</string>
+    <string name="pairing_code">Eşleştirme Kodu</string>
+    <string name="enter_pairing_code">Eşleştirme kodunu girin</string>
+    <string name="generate_pairing_code">Kod Oluştur</string>
+    <string name="start_pairing">Eşleştir</string>
+    <string name="pairing_success">Eşleştirme Başarılı</string>
+    <string name="pairing_failed">Eşleştirme Başarısız</string>
+    <string name="pairing_code_hint">123456</string>
+
+    <!-- Quick Settings -->
+    <string name="qs_tile_label">PC Voice</string>
+    <string name="qs_tile_label_connected">PC Voice Aktif</string>
+    <string name="qs_tile_label_disconnected">PC Voice Pasif</string>
+
+    <!-- Settings -->
+    <string name="settings">Ayarlar</string>
+    <string name="connection_settings">Bağlantı Ayarları</string>
+    <string name="audio_settings">Ses Ayarları</string>
+    <string name="about">Hakkında</string>
+
+    <!-- Permissions -->
+    <string name="permission_required">İzin Gerekli</string>
+    <string name="permission_audio_title">Mikrofon İzni</string>
+    <string name="permission_audio_message">Ses komutlarını kullanmak için mikrofon erişimi gereklidir.</string>
+    <string name="permission_network_title">Ağ İzni</string>
+    <string name="permission_network_message">PC\'ye bağlanmak için ağ erişimi gereklidir.</string>
+
+    <!-- Error Messages -->
+    <string name="error_connection_failed">Bağlantı başarısız</string>
+    <string name="error_microphone_denied">Mikrofon izni reddedildi</string>
+    <string name="error_network_unavailable">Ağ bağlantısı yok</string>
+    <string name="error_voice_not_understood">Ses anlaşılamadı</string>
+    <string name="error_command_failed">Komut başarısız</string>
+
+    <!-- Success Messages -->
+    <string name="success_connected">PC\'ye başarıyla bağlandı</string>
+    <string name="success_command_executed">Komut başarıyla çalıştırıldı</string>
+
+    <!-- Status Messages -->
+    <string name="status_listening">Dinleniyor...</string>
+    <string name="status_processing">İşleniyor...</string>
+    <string name="status_executing">Çalıştırılıyor...</string>
+    <string name="status_completed">Tamamlandı</string>
+
+    <!-- Common Actions -->
+    <string name="action_ok">Tamam</string>
+    <string name="action_cancel">İptal</string>
+    <string name="action_retry">Tekrar Dene</string>
+    <string name="action_dismiss">Kapat</string>
+    <string name="action_continue">Devam Et</string>
+
+    <!-- Help -->
+    <string name="help_pairing_steps">
+        1. PC uygulamasını açın\n
+        2. Eşleştirme modunu başlatın\n
+        3. PC\'deki kodu girin\n
+        4. Bağlantıyı onaylayın
+    </string>
+</resources>

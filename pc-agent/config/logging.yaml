@@ -1,0 +1,131 @@
+# Logging Configuration for PC Control Agent
+# Structured logging with levels, formatters, and handlers
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  json:
+    class: pythonjsonlogger.jsonlogger.JsonFormatter
+    format: '%(asctime)s %(name)s %(levelname)s %(filename)s %(lineno)d %(message)s'
+
+  security_audit:
+    format: '[SECURITY] %(asctime)s - %(levelname)s - %(message)s - [User: %(user_id)s | Device: %(device_id)s | IP: %(ip_address)s]'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: standard
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/pc-agent.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/pc-agent-errors.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  security_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: security_audit
+    filename: logs/security-audit.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 10
+    encoding: utf-8
+
+  performance_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: json
+    filename: logs/performance.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+    encoding: utf-8
+
+loggers:
+  # Root logger
+  root:
+    level: INFO
+    handlers: [console, file, error_file]
+    propagate: false
+
+  # Application modules
+  src:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  src.api:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  src.services:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  src.database:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  # Security audit logger
+  security:
+    level: INFO
+    handlers: [security_file, console]
+    propagate: false
+
+  # Performance monitoring logger
+  performance:
+    level: DEBUG
+    handlers: [performance_file]
+    propagate: false
+
+  # External libraries
+  uvicorn:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  fastapi:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  websockets:
+    level: WARNING
+    handlers: [console, file]
+    propagate: false
+
+  aiosqlite:
+    level: WARNING
+    handlers: [file]
+    propagate: false
+
+# Log levels by environment
+# Development: DEBUG
+# Staging: INFO
+# Production: WARNING
