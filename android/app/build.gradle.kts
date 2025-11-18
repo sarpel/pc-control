@@ -59,12 +59,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
     }
-
-    packagingOptions {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
 }
 
 dependencies {
@@ -124,7 +118,7 @@ dependencies {
     // Android Testing
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.6")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -141,6 +135,6 @@ kapt {
 
 detekt {
     toolVersion = "1.23.0"
-    config = files("$projectDir/config/detekt/detekt.yml")
+    config.setFrom(files("$rootDir/detekt.yml"))
     buildUponDefaultConfig = true
 }
