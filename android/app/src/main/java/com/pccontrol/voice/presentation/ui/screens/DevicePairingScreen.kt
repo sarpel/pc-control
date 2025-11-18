@@ -39,7 +39,7 @@ fun DevicePairingScreen(
                     }
                 }
             )
-        )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -120,7 +120,6 @@ fun DevicePairingScreen(
                         placeholder = { Text("123456") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        maxLength = 6,
                         isError = uiState.pairingCodeError != null,
                         supportingText = uiState.pairingCodeError?.let {
                             { Text(it) }

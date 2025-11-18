@@ -89,7 +89,7 @@ fun OnboardingScreen(
                 title = "Hoş Geldiniz!", // "Welcome!"
                 description = "PC'nizi sesli komutlarla kontrol edin. Türkçe komutlarla bilgisayarınızı kolayca yönetin.",
                 // "Control your PC with voice commands. Easily manage your computer with Turkish commands."
-                icon = Icons.Default.Waving,
+                icon = Icons.Default.WavingHand,
                 tips = listOf(
                     "Telefon ve PC aynı WiFi ağında olmalı",
                     "Güvenli bağlantı için tek seferlik eşleştirme gerekir",
@@ -144,7 +144,7 @@ fun OnboardingScreen(
                 title = "Başlayalım!", // "Let's Start!"
                 description = "Hemen eşleştirme işlemini başlatarak PC'nizi kontrol etmeye başlayın.",
                 // "Start pairing now to begin controlling your PC."
-                icon = Icons.Default.RocketLaunch,
+                icon = Icons.Default.Rocket,
                 tips = listOf(
                     "PC'de servis uygulamasını çalıştırın",
                     "Android uygulamada eşleştirme kodunu girin",

@@ -149,6 +149,17 @@ enum class ActionType(val displayName: String) {
 class VoiceCommandRepository private constructor(
     private val context: Context
 ) {
+    companion object {
+        @Volatile
+        private var INSTANCE: VoiceCommandRepository? = null
+
+        fun getInstance(context: Context): VoiceCommandRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: VoiceCommandRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
+    
     private val database = VoiceCommandDatabase.getDatabase(context)
     private val dao = database.voiceCommandDao()
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -327,6 +338,20 @@ class VoiceCommandRepository private constructor(
      */
     fun cleanup() {
         repositoryScope.cancel()
+    }
+    
+    /**
+     * Clear all commands from the database
+     */
+    suspend fun clearAllCommands() {
+        withContext(Dispatchers.IO) {
+            // Delete all commands
+            val allCommands = dao.getRecentCommands().first()
+            allCommands.forEach { entity ->
+                dao.deleteExpiredCommands(Long.MAX_VALUE) // Delete all by using max timestamp
+            }
+            _currentCommand.value = null
+        }
     }
 
     /**

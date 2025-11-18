@@ -40,6 +40,7 @@ class QuickSettingsTileService : TileService() {
         private const val KEY_TILE_STATE = "tile_state"
         private const val KEY_CONNECTION_STATUS = "connection_status"
         private const val KEY_LAST_UPDATE = "last_update"
+        const val ACTION_VOICE_COMMAND = "com.pccontrol.voice.VOICE_COMMAND"
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -263,7 +264,7 @@ class QuickSettingsTileService : TileService() {
      * Launch voice assistant for immediate voice input
      */
     private fun launchVoiceAssistant() {
-        val intent = Intent(this, VoiceAssistantActivity::class.java).apply {
+        val intent = Intent(this, com.pccontrol.voice.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             action = ACTION_VOICE_COMMAND
         }
@@ -307,7 +308,15 @@ class QuickSettingsTileService : TileService() {
      * Show connection error dialog with troubleshooting options
      */
     private fun showConnectionErrorDialog() {
-        val intent = Intent(this, ConnectionTroubleshootingActivity::class.java).apply {
+        // Show toast with error message since we can't show dialogs from TileService
+        android.widget.Toast.makeText(
+            this,
+            "Bağlantı hatası. Lütfen uygulamayı açın ve ayarları kontrol edin.",
+            android.widget.Toast.LENGTH_LONG
+        ).show()
+        
+        // Launch main app for troubleshooting
+        val intent = Intent(this, com.pccontrol.voice.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         startActivity(intent)
@@ -360,28 +369,5 @@ class QuickSettingsTileService : TileService() {
 
         fun isConnected(): Boolean = isConnected
         fun isConnecting(): Boolean = isConnecting
-    }
-
-    companion object {
-        const val ACTION_VOICE_COMMAND = "com.pccontrol.voice.VOICE_COMMAND"
-    }
-}
-
-/**
- * Activity for troubleshooting connection issues
- */
-class ConnectionTroubleshootingActivity : androidx.appcompat.app.AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // Simple troubleshooting UI
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Bağlantı Sorunu") // "Connection Issue" in Turkish
-            .setMessage("Sesli asistan PC'ye bağlanamıyor. Aşağıdaki adımları deneyin:\n\n" +
-                    "1. PC'nin aynı WiFi ağında olduğundan emin olun\n" +
-                    "2. PC'de Sesli Asistan hizmetinin çalıştığını kontrol edin\n" +
-                    "3. Uygulama ayarlarından yeniden eşleştirin")
-            .setPositiveButton("Tamam") { dialog, _ -> dialog.dismiss() }
-            .show()
     }
 }

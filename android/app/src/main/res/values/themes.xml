@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme -->
+    <style name="Theme.PCVoiceAssistant" parent="android:Theme.Material.Light">
+        <!-- Primary brand color -->
+        <item name="android:colorPrimary">@color/voice_primary</item>
+        <item name="android:colorPrimaryDark">@color/md_theme_light_primary</item>
+        <item name="android:colorAccent">@color/voice_accent</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/voice_background</item>
+        <item name="android:textColorPrimary">@color/voice_text_primary</item>
+        <item name="android:textColorSecondary">@color/voice_text_secondary</item>
+    </style>
+
+    <!-- Theme without action bar for activities that don't need it -->
+    <style name="Theme.PCVoiceAssistant.NoActionBar" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="android:colorPrimary">@color/voice_primary</item>
+        <item name="android:colorPrimaryDark">@color/md_theme_light_primary</item>
+        <item name="android:colorAccent">@color/voice_accent</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/voice_background</item>
+        <item name="android:textColorPrimary">@color/voice_text_primary</item>
+        <item name="android:textColorSecondary">@color/voice_text_secondary</item>
+
+        <!-- Window settings -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

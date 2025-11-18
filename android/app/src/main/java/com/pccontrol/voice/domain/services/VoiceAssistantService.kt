@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.pccontrol.voice.data.repository.CommandStatus
+import com.pccontrol.voice.data.repository.VoiceCommandRepository
 
 /**
  * Voice Assistant Foreground Service
@@ -385,7 +387,7 @@ class VoiceAssistantService : Service() {
     /**
      * Handle error message from PC
      */
-    private fun handleCommandResult(errorMessage: String) {
+    private fun handleErrorMessage(errorMessage: String) {
         Log.w(TAG, "Received error from PC: $errorMessage")
 
         // Show error notification
@@ -553,7 +555,7 @@ class VoiceAssistantService : Service() {
 
     // Import required types that would be defined elsewhere
     // These would typically be in separate files
-    enum class CommandStatus { LISTENING, PROCESSING, EXECUTING, COMPLETED, ERROR }
+    // CommandStatus imported from repository
     data class CommandResult(val success: Boolean, val message: String)
     enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
     data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)

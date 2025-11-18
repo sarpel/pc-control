@@ -31,6 +31,7 @@
     <string name="qs_tile_label">PC Voice</string>
     <string name="qs_tile_label_connected">PC Voice Aktif</string>
     <string name="qs_tile_label_disconnected">PC Voice Pasif</string>
+    <string name="quick_settings_tile_label">PC Voice Control</string>
 
     <!-- Settings -->
     <string name="settings">Ayarlar</string>
@@ -75,5 +76,13 @@
         2. Eşleştirme modunu başlatın\n
         3. PC\'deki kodu girin\n
         4. Bağlantıyı onaylayın
+    </string>
+
+    <!-- Voice Command Examples -->
+    <string name="command_examples">
+        • "Chrome\'ı aç"\n
+        • "Bilgisayarı kapat"\n
+        • "Sesi azalt"\n
+        • "Notepad\'i aç"
     </string>
 </resources>

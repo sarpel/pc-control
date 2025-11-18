@@ -20,6 +20,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pccontrol.voice.presentation.viewmodel.DiscoveredPC
+import com.pccontrol.voice.presentation.viewmodel.SetupStep
+import com.pccontrol.voice.presentation.viewmodel.SetupWizardUiState
 import com.pccontrol.voice.presentation.viewmodel.SetupWizardViewModel
 
 /**

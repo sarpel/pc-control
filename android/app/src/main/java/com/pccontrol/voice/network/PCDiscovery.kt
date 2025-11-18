@@ -190,7 +190,7 @@ class PCDiscovery(private val context: Context) {
     private suspend fun discoverByNetworkScanning(networkInfo: LocalNetworkInfo): List<DiscoveredPC> {
         return try {
             val scanRange = generateScanRange(networkInfo)
-            Log.d(TAG, "Scanning network range: ${scanRange.first} - ${scanRange.last}")
+            Log.d(TAG, "Scanning network range: ${scanRange.first()} - ${scanRange.last()}")
 
             coroutineScope {
                 scanRange.chunked(MAX_CONCURRENT_SCANS).map { chunk ->
@@ -343,7 +343,7 @@ class PCDiscovery(private val context: Context) {
         return try {
             // Try to get local IP by connecting to external server
             val socket = Socket()
-            socket.connect(InetAddress.getByName("8.8.8.8"), 53)
+            socket.connect(InetSocketAddress(InetAddress.getByName("8.8.8.8"), 53))
             val localAddress = socket.localAddress as InetAddress
             socket.close()
 

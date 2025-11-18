@@ -21,11 +21,11 @@ from collections import deque
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status
 
-from src.config.settings import get_settings
-from src.services.connection_manager import ConnectionManager
-from src.services.voice_command_processor import VoiceCommandProcessor
-from src.services.performance_monitor import performance_monitor
-from src.services.audio_processor import AudioProcessor
+from config.settings import get_settings
+from services.connection_manager import ConnectionManager
+from services.voice_command_processor import VoiceCommandProcessor
+from services.performance_monitor import performance_monitor
+from services.audio_processor import AudioProcessor
 
 logger = logging.getLogger(__name__)
 

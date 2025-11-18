@@ -3,9 +3,14 @@ package com.pccontrol.voice.data.repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import java.time.Instant
+
+// Extension property for DataStore
+private val Context.tileStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "tile_state_repository")
 
 /**
  * Tile State Repository
@@ -35,7 +40,7 @@ import java.time.Instant
 class TileStateRepository private constructor(
     private val context: Context
 ) {
-    private val dataStore: DataStore<Preferences> = context.createDataStore(name = "tile_state_repository")
+    private val dataStore: DataStore<Preferences> = context.tileStateDataStore
 
     // State keys
     companion object {
@@ -62,9 +67,10 @@ class TileStateRepository private constructor(
     enum class TileState(val value: String, val displayName: String) {
         INACTIVE("inactive", "Aktif Değil"),         // "Inactive"
         ACTIVE("active", "Aktif"),                   // "Active"
+        CONNECTING("connecting", "Bağlanıyor"),      // "Connecting"
         UNAVAILABLE("unavailable", "Kullanılamıyor"), // "Unavailable"
-        ERROR("error", "Hata")                      // "Error"
-
+        ERROR("error", "Hata");                      // "Error"
+        
         companion object {
             fun fromValue(value: String): TileState {
                 return values().find { it.value == value } ?: INACTIVE
@@ -276,18 +282,17 @@ class TileStateRepository private constructor(
 
     // Export/Import methods for backup/restore
     suspend fun exportState(): TileStateExport {
-        return dataStore.data.map { preferences ->
-            TileStateExport(
-                tileState = preferences[KEY_TILE_STATE] ?: TileState.INACTIVE.value,
-                lastConnectionTime = preferences[KEY_LAST_CONNECTION_TIME] ?: 0,
-                totalCommands = preferences[KEY_TOTAL_COMMANDS_PROCESSED] ?: 0,
-                successfulCommands = preferences[KEY_SUCCESSFUL_COMMANDS] ?: 0,
-                failedCommands = preferences[KEY_FAILED_COMMANDS] ?: 0,
-                pcIpAddress = preferences[KEY_PC_IP_ADDRESS] ?: "",
-                batteryDrain = preferences[KEY_BATTERY_DRAIN_PERCENTAGE] ?: 0f,
-                uptimeHours = preferences[KEY_UPTIME_HOURS] ?: 0f
-            )
-        }
+        val preferences = dataStore.data.first()
+        return TileStateExport(
+            tileState = preferences[KEY_TILE_STATE] ?: TileState.INACTIVE.value,
+            lastConnectionTime = preferences[KEY_LAST_CONNECTION_TIME] ?: 0,
+            totalCommands = preferences[KEY_TOTAL_COMMANDS_PROCESSED] ?: 0,
+            successfulCommands = preferences[KEY_SUCCESSFUL_COMMANDS] ?: 0,
+            failedCommands = preferences[KEY_FAILED_COMMANDS] ?: 0,
+            pcIpAddress = preferences[KEY_PC_IP_ADDRESS] ?: "",
+            batteryDrain = preferences[KEY_BATTERY_DRAIN_PERCENTAGE] ?: 0f,
+            uptimeHours = preferences[KEY_UPTIME_HOURS] ?: 0f
+        )
     }
 
     suspend fun importState(export: TileStateExport) {

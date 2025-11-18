@@ -40,7 +40,6 @@ class AudioStreamer {
     fun initialize() {
         try {
             val format = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, CHANNEL_COUNT).apply {
-                setInteger(MediaFormat.KEY_AAC_PROFILE, MediaFormat.KEY_BIT_RATE)
                 setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
                 setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, CHUNK_SIZE)
             }

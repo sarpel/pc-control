@@ -4,7 +4,7 @@ import android.content.Context
 import com.pccontrol.voice.network.WebSocketClient
 import com.pccontrol.voice.security.KeyStoreManager
 import com.pccontrol.voice.data.database.AppDatabase
-import com.pccontrol.voice.data.database.PCConnection
+import com.pccontrol.voice.data.models.PCConnection
 import com.pccontrol.voice.data.models.ConnectionStatus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*

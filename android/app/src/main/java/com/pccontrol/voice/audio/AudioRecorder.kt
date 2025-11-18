@@ -117,7 +117,7 @@ class AudioRecorder private constructor(
             Result.success(file)
 
         } catch (e: Exception) {
-            cleanup()
+            cleanupResources()
             Result.failure(e)
         }
     }
@@ -142,13 +142,13 @@ class AudioRecorder private constructor(
                 }
             }
 
-            cleanup()
+            cleanupResources()
             _recordingState.value = RecordingState.COMPLETED
 
             Result.success(file)
 
         } catch (e: Exception) {
-            cleanup()
+            cleanupResources()
             Result.failure(e)
         }
     }
@@ -226,13 +226,13 @@ class AudioRecorder private constructor(
             // Delete the file
             file?.delete()
 
-            cleanup()
+            cleanupResources()
             _recordingState.value = RecordingState.CANCELLED
 
             Result.success(Unit)
 
         } catch (e: Exception) {
-            cleanup()
+            cleanupResources()
             Result.failure(e)
         }
     }
@@ -301,7 +301,7 @@ class AudioRecorder private constructor(
         }
     }
 
-    private fun cleanup() {
+    private fun cleanupResources() {
         mediaRecorder?.release()
         mediaRecorder = null
         audioFile = null
@@ -362,6 +362,6 @@ class AudioRecorder private constructor(
      */
     fun cleanup() {
         scope.cancel()
-        cleanup()
+        cleanupResources()
     }
 }

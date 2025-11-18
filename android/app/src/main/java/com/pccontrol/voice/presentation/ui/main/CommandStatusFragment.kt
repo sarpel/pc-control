@@ -27,30 +27,15 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pccontrol.voice.presentation.viewmodel.CommandStatusViewModel
+import com.pccontrol.voice.presentation.viewmodel.ConnectionState
+import com.pccontrol.voice.data.repository.CommandStatus
+import com.pccontrol.voice.data.repository.VoiceCommand
 
 /**
  * Command Status Fragment
  *
  * Displays real-time voice command status and command history.
- * Provides visual feedback for voice command processing with Turkish
- * language support and 200ms timing validation for UI updates.
- *
- * Features:
- * - Real-time command status display
- * - Voice activity visualization with animated indicators
- * - Command history with Turkish descriptions
- * - Connection status monitoring
- * - Error display with troubleshooting guidance
- * - Performance-optimized UI updates (200ms requirement)
- * - Accessibility support with screen reader compatibility
- *
- * UI Performance Features:
- * - Optimized recomposition for 200ms timing validation
- * - Efficient LazyColumn for command history
- * - Minimal animations to save battery
- * - Large touch targets for accessibility
- *
- * Task: T054 [US1] Create command status UI in android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt
  */
 class CommandStatusFragment : Fragment() {
 
@@ -81,16 +66,16 @@ class CommandStatusFragment : Fragment() {
             viewModel.commandStatusFlow.collect { status ->
                 // Provide haptic feedback for status changes
                 when (status) {
-                    is CommandStatus.Listening -> {
+                    CommandStatus.LISTENING -> {
                         // Subtle vibration for listening start
                     }
-                    is CommandStatus.Processing -> {
+                    CommandStatus.PROCESSING -> {
                         // Light pulse for processing
                     }
-                    is CommandStatus.Completed -> {
+                    CommandStatus.COMPLETED -> {
                         // Success vibration pattern
                     }
-                    is CommandStatus.Error -> {
+                    CommandStatus.ERROR -> {
                         // Error vibration pattern
                     }
                     else -> { /* No feedback */ }
@@ -140,7 +125,7 @@ fun CommandStatusScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Voice activity indicator
-            if (uiState.commandStatus is CommandStatus.Listening) {
+            if (uiState.commandStatus == CommandStatus.LISTENING) {
                 VoiceActivityIndicator(
                     audioLevel = uiState.audioLevel,
                     modifier = Modifier.fillMaxWidth()
@@ -167,7 +152,7 @@ fun CommandStatusScreen(
 
             // Action buttons
             ActionButtons(
-                isListening = uiState.commandStatus is CommandStatus.Listening,
+                isListening = uiState.commandStatus == CommandStatus.LISTENING,
                 onStartListening = { viewModel.startListening() },
                 onStopListening = { viewModel.stopListening() },
                 modifier = Modifier.fillMaxWidth()
@@ -254,7 +239,7 @@ fun ConnectionStatusHeader(
  */
 @Composable
 fun CommandStatusDisplay(
-    commandStatus: CommandStatus,
+    commandStatus: CommandStatus?,
     currentCommand: VoiceCommand?
 ) {
     Card(
@@ -276,24 +261,24 @@ fun CommandStatusDisplay(
                     .clip(CircleShape)
                     .background(
                         when (commandStatus) {
-                            is CommandStatus.Listening -> Color(0xFF2196F3)
-                            is CommandStatus.Processing -> Color(0xFFFF9800)
-                            is CommandStatus.Completed -> Color(0xFF4CAF50)
-                            is CommandStatus.Error -> Color(0xFFF44336)
-                            else -> Color(0xFF9E9E9E)
+                            CommandStatus.LISTENING -> Color(0xFF2196F3)
+                            CommandStatus.PROCESSING -> Color(0xFFFF9800)
+                            CommandStatus.COMPLETED -> Color(0xFF4CAF50)
+                            CommandStatus.ERROR -> Color(0xFFF44336)
+                            else -> Color(0xFF9E9E9E) // Idle or other
                         }
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = when (commandStatus) {
-                        is CommandStatus.Listening -> Icons.Default.Mic
-                        is CommandStatus.Processing -> Icons.Default.Settings
-                        is CommandStatus.Completed -> Icons.Default.CheckCircle
-                        is CommandStatus.Error -> Icons.Default.Error
-                        else -> Icons.Default.MicNone
+                        CommandStatus.LISTENING -> Icons.Default.Mic
+                        CommandStatus.PROCESSING -> Icons.Default.Settings
+                        CommandStatus.COMPLETED -> Icons.Default.CheckCircle
+                        CommandStatus.ERROR -> Icons.Default.Error
+                        else -> Icons.Default.MicNone // Idle
                     },
-                    contentDescription = commandStatus.displayName,
+                    contentDescription = commandStatus?.displayName ?: "Hazır",
                     tint = Color.White,
                     modifier = Modifier.size(40.dp)
                 )
@@ -303,7 +288,7 @@ fun CommandStatusDisplay(
 
             // Status text
             Text(
-                text = commandStatus.displayName,
+                text = commandStatus?.displayName ?: "Hazır",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -506,14 +491,14 @@ fun CommandHistoryItem(command: VoiceCommand) {
     ) {
         Icon(
             imageVector = when (command.status) {
-                CommandStatus.Completed -> Icons.Default.CheckCircle
-                CommandStatus.Error -> Icons.Default.Error
+                CommandStatus.COMPLETED -> Icons.Default.CheckCircle
+                CommandStatus.ERROR -> Icons.Default.Error
                 else -> Icons.Default.History
             },
             contentDescription = null,
             tint = when (command.status) {
-                CommandStatus.Completed -> Color(0xFF4CAF50)
-                CommandStatus.Error -> Color(0xFFF44336)
+                CommandStatus.COMPLETED -> Color(0xFF4CAF50)
+                CommandStatus.ERROR -> Color(0xFFF44336)
                 else -> Color(0xFF9E9E9E)
             },
             modifier = Modifier.size(20.dp)
@@ -538,7 +523,7 @@ fun CommandHistoryItem(command: VoiceCommand) {
         }
 
         Text(
-            text = formatCommandTime(command.timestamp),
+            text = formatCommandTime(command.timestamp.toEpochMilli()), // Fix: Convert Instant to long if needed
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

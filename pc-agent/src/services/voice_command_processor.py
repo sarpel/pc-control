@@ -16,10 +16,10 @@ from enum import Enum
 import uuid
 from datetime import datetime
 
-from src.services.browser_control import BrowserControlService, BrowserAction, ElementSelectorType
-from src.services.system_control import SystemControlService, SystemAction, FileType
-from src.services.connection_manager import ConnectionManager
-from src.database.connection import get_database_connection
+from services.browser_control import BrowserControlService, BrowserAction, ElementSelectorType
+from services.system_control import SystemControlService, SystemAction, FileType
+from services.connection_manager import ConnectionManager
+from database.connection import get_database_connection
 
 logger = logging.getLogger(__name__)
 
