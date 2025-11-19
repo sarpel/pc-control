@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, Union
 import aiosqlite
 
-from src.config.settings import get_settings
-from src.database.schema import DATABASE_SCHEMA
+from config.settings import get_settings
+from database.schema import DATABASE_SCHEMA
 
 logger = logging.getLogger(__name__)
 

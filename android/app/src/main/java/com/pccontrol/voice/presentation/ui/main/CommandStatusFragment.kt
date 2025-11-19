@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pccontrol.voice.presentation.viewmodel.CommandStatusViewModel
@@ -134,9 +135,10 @@ fun CommandStatusScreen(
             }
 
             // Error display
-            if (uiState.errorMessage != null) {
+            val errorMsg = uiState.errorMessage
+            if (errorMsg != null) {
                 ErrorDisplay(
-                    errorMessage = uiState.errorMessage,
+                    errorMessage = errorMsg,
                     onRetryConnection = onRetryConnection,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -352,12 +354,12 @@ fun VoiceActivityIndicator(
                 verticalAlignment = Alignment.Bottom
             ) {
                 repeat(7) { index ->
-                    val height = (audioLevel * 60 * (1 - index * 0.1)).coerceAtLeast(4.dp)
+                    val height = (audioLevel * 60f * (1 - index * 0.1f)).coerceAtLeast(4f)
 
                     Box(
                         modifier = Modifier
                             .width(8.dp)
-                            .height(height)
+                            .height(height.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
                                 if (audioLevel > 0.1f) Color(0xFF2196F3)

@@ -37,7 +37,7 @@ except ImportError:
     SELENIUM_AVAILABLE = False
     logging.warning("Selenium not available. Browser control features will be limited.")
 
-from src.config.settings import get_settings
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 

@@ -160,7 +160,7 @@ class CertificateValidator(
     /**
      * Validate certificate chain against pinned certificates.
      */
-    fun validateCertificateChain(hostname: String, certificates: Array<Certificate>): ValidationResult {
+    fun validateCertificateChain(hostname: String, certificates: Array<X509Certificate>): ValidationResult {
         if (certificates.isEmpty()) {
             return ValidationResult(
                 isValid = false,
@@ -230,7 +230,8 @@ class CertificateValidator(
             val peerCertificates = session.peerCertificates
 
             // Validate certificate chain
-            val chainResult = validateCertificateChain(hostname, peerCertificates)
+            val x509Certificates = peerCertificates.filterIsInstance<X509Certificate>().toTypedArray()
+            val chainResult = validateCertificateChain(hostname, x509Certificates)
             if (!chainResult.isValid) {
                 return chainResult
             }

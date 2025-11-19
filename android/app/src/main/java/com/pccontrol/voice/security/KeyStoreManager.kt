@@ -90,7 +90,7 @@ class KeyStoreManager private constructor(private val context: Context) {
             KEYSTORE_ALIAS,
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         )
-            .setAlgorithmParameterSpec(RSAKeyGenParameterSpec(RSA_KEY_SIZE))
+            .setAlgorithmParameterSpec(RSAKeyGenParameterSpec(RSA_KEY_SIZE, BigInteger.valueOf(65537L)))
             .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
             .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
             .setCertificateSubject(X500Principal("CN=PC Voice Assistant Client"))

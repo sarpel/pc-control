@@ -195,7 +195,7 @@ class BatteryMonitor private constructor(
      */
     fun getCurrentBatteryInfo(): BatteryInfo? {
         return try {
-            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 // For Android 5.0+, use BatteryManager API
                 val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
                 val status = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
@@ -206,8 +206,8 @@ class BatteryMonitor private constructor(
                     status = status,
                     health = BatteryManager.BATTERY_HEALTH_UNKNOWN,
                     plugged = getPluggedType(status),
-                    temperature = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_TEMPERATURE) / 10f,
-                    voltage = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_VOLTAGE),
+                    temperature = 25f, // Default temperature
+                    voltage = 3700,   // Default voltage
                     technology = "Unknown"
                 )
             } else {

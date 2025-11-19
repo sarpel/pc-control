@@ -14,11 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,6 +28,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+
+/**
+ * Data class to represent a voice level visualization circle
+ */
+private data class VoiceCircle(
+    val radius: Float,
+    val color: Color,
+    val alpha: Float
+)
 
 /**
  * Voice command button with visual feedback for recording state.
@@ -44,7 +56,7 @@ fun VoiceCommandButton(
     LaunchedEffect(isListening) {
         if (isListening) {
             while (true) {
-                pulseAnimation = 1f + (0.1f * kotlin.math.sin(System.currentTimeMillis() * 0.005))
+                pulseAnimation = 1f + (0.1f * kotlin.math.sin(System.currentTimeMillis() * 0.005f))
                 delay(50)
             }
         } else {
@@ -159,7 +171,7 @@ private fun VoiceLevelVisualizer(
             val threshold = animatedLevel * 0.8f
             val isActive = progress <= threshold
 
-            Triple(
+            VoiceCircle(
                 radius = baseRadius + (maxRadius - baseRadius) * progress,
                 color = when {
                     progress < 0.3f -> Color.Green
@@ -170,10 +182,10 @@ private fun VoiceLevelVisualizer(
             )
         }
 
-        circles.forEach { (radius, color, alpha) ->
+        circles.forEach { circle ->
             drawCircle(
-                color = color.copy(alpha = alpha),
-                radius = radius,
+                color = circle.color.copy(alpha = circle.alpha),
+                radius = circle.radius,
                 center = Offset(centerX, centerY),
                 style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
             )

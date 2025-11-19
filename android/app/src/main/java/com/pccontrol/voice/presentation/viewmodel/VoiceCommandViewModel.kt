@@ -54,20 +54,40 @@ class VoiceCommandViewModel @Inject constructor(
 
                 val result = audioProcessingService.startVoiceCommandProcessing()
 
-                if (result.isValid) {
-                    _uiState.value = _uiState.value.copy(
-                        statusMessage = result.transcription,
-                        isError = false
-                    )
+                result.fold(
+                    onSuccess = { voiceCommand ->
+                        if (voiceCommand.isValid) {
+                            _uiState.value = _uiState.value.copy(
+                                statusMessage = voiceCommand.transcription.orEmpty(),
+                                isError = false
+                            )
 
-                    // Send command to PC
-                    sendCommandToPC(result)
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        statusMessage = "Emir anlaşılamadı. Lütfen tekrar deneyin.",
-                        isError = true
-                    )
-                }
+                            // Send command to PC
+                            sendCommandToPC(voiceCommand)
+
+                            // Add to recent commands
+                            val newCommand = RecentCommand(
+                                transcription = voiceCommand.transcription.orEmpty(),
+                                success = true,
+                                timestamp = System.currentTimeMillis()
+                            )
+                            _uiState.value = _uiState.value.copy(
+                                recentCommands = listOf(newCommand) + _uiState.value.recentCommands.take(4)
+                            )
+                        } else {
+                            _uiState.value = _uiState.value.copy(
+                                statusMessage = "Komut gönderilemedi",
+                                isError = true
+                            )
+                        }
+                    },
+                    onFailure = { error ->
+                        _uiState.value = _uiState.value.copy(
+                            statusMessage = "İşlem hatası: ${error.message}",
+                            isError = true
+                        )
+                    }
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     statusMessage = "Hata: ${e.message}",
@@ -116,7 +136,7 @@ class VoiceCommandViewModel @Inject constructor(
 
                     // Add to recent commands
                     val newCommand = RecentCommand(
-                        transcription = voiceCommand.transcription,
+                        transcription = voiceCommand.transcription.orEmpty(),
                         success = true,
                         timestamp = System.currentTimeMillis()
                     )

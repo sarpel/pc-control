@@ -239,13 +239,13 @@ fun SignalStrengthBars(
         verticalAlignment = Alignment.Bottom
     ) {
         repeat(4) { index ->
-            val barHeight = (index + 1) * (size / 4f)
+            val barHeight = (index + 1) * (size.value / 4f)
             val isActive = index < barCount
 
             Box(
                 modifier = Modifier
                     .width(size / 5f)
-                    .height(barHeight)
+                    .height(barHeight.dp)
                     .background(
                         color = if (isActive) quality.color else Color.Gray.copy(alpha = 0.3f),
                         shape = RoundedCornerShape(1.dp)

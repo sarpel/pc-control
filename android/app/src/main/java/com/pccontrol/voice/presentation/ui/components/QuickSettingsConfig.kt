@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -52,7 +53,7 @@ import kotlinx.coroutines.flow.map
 class QuickSettingsConfig private constructor(
     private val context: Context
 ) {
-    private val dataStore: DataStore<Preferences> = context.createDataStore(name = "quick_settings_preferences")
+    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "quick_settings_preferences")
 
     // Preference keys
     companion object {
@@ -85,122 +86,122 @@ class QuickSettingsConfig private constructor(
     }
 
     // Preference flows
-    val tileEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+    val tileEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_TILE_ENABLED] ?: Defaults.TILE_ENABLED
     }
 
-    val autoConnect: Flow<Boolean> = dataStore.data.map { preferences ->
+    val autoConnect: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_AUTO_CONNECT] ?: Defaults.AUTO_CONNECT
     }
 
-    val vibrationFeedback: Flow<Boolean> = dataStore.data.map { preferences ->
+    val vibrationFeedback: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_VIBRATION_FEEDBACK] ?: Defaults.VIBRATION_FEEDBACK
     }
 
-    val showNotifications: Flow<Boolean> = dataStore.data.map { preferences ->
+    val showNotifications: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_SHOW_NOTIFICATIONS] ?: Defaults.SHOW_NOTIFICATIONS
     }
 
-    val audioSensitivity: Flow<AudioSensitivity> = dataStore.data.map { preferences ->
+    val audioSensitivity: Flow<AudioSensitivity> = context.dataStore.data.map { preferences ->
         val sensitivity = preferences[KEY_AUDIO_SENSITIVITY] ?: Defaults.AUDIO_SENSITIVITY
         AudioSensitivity.fromValue(sensitivity)
     }
 
-    val connectionTimeout: Flow<Int> = dataStore.data.map { preferences ->
+    val connectionTimeout: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[KEY_CONNECTION_TIMEOUT] ?: Defaults.CONNECTION_TIMEOUT
     }
 
-    val maxReconnectAttempts: Flow<Int> = dataStore.data.map { preferences ->
+    val maxReconnectAttempts: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[KEY_MAX_RECONNECT_ATTEMPTS] ?: Defaults.MAX_RECONNECT_ATTEMPTS
     }
 
-    val batteryOptimization: Flow<BatteryOptimization> = dataStore.data.map { preferences ->
+    val batteryOptimization: Flow<BatteryOptimization> = context.dataStore.data.map { preferences ->
         val optimization = preferences[KEY_BATTERY_OPTIMIZATION] ?: Defaults.BATTERY_OPTIMIZATION
         BatteryOptimization.fromValue(optimization)
     }
 
-    val pcIpAddress: Flow<String> = dataStore.data.map { preferences ->
+    val pcIpAddress: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[KEY_PC_IP_ADDRESS] ?: Defaults.PC_IP_ADDRESS
     }
 
-    val wakeOnLan: Flow<Boolean> = dataStore.data.map { preferences ->
+    val wakeOnLan: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_WAKE_ON_LAN] ?: Defaults.WAKE_ON_LAN
     }
 
-    val isFirstLaunch: Flow<Boolean> = dataStore.data.map { preferences ->
+    val isFirstLaunch: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_FIRST_LAUNCH] ?: Defaults.FIRST_LAUNCH
     }
 
     // Update methods
     suspend fun setTileEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_TILE_ENABLED] = enabled
         }
     }
 
     suspend fun setAutoConnect(autoConnect: Boolean) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_AUTO_CONNECT] = autoConnect
         }
     }
 
     suspend fun setVibrationFeedback(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_VIBRATION_FEEDBACK] = enabled
         }
     }
 
     suspend fun setShowNotifications(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_SHOW_NOTIFICATIONS] = enabled
         }
     }
 
     suspend fun setAudioSensitivity(sensitivity: AudioSensitivity) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_AUDIO_SENSITIVITY] = sensitivity.value
         }
     }
 
     suspend fun setConnectionTimeout(timeout: Int) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_CONNECTION_TIMEOUT] = timeout
         }
     }
 
     suspend fun setMaxReconnectAttempts(attempts: Int) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_MAX_RECONNECT_ATTEMPTS] = attempts
         }
     }
 
     suspend fun setBatteryOptimization(optimization: BatteryOptimization) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_BATTERY_OPTIMIZATION] = optimization.value
         }
     }
 
     suspend fun setPcIpAddress(ipAddress: String) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_PC_IP_ADDRESS] = ipAddress
         }
     }
 
     suspend fun setWakeOnLan(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_WAKE_ON_LAN] = enabled
         }
     }
 
     suspend fun setFirstLaunched() {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[KEY_FIRST_LAUNCH] = false
         }
     }
 
     // Reset to defaults
     suspend fun resetToDefaults() {
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences.clear()
         }
     }

@@ -256,7 +256,7 @@ class WebSocketClient private constructor(
                 }
             }
 
-            override fun onMessage(webSocket: WebSocket, bytes: okhttp3.ByteString) {
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 // Handle binary messages if needed
                 CoroutineScope(Dispatchers.IO).launch {
                     _messages.emit(bytes.hex())

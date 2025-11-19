@@ -129,9 +129,10 @@ fun DevicePairingScreen(
             }
 
             // Step 3 - Show pairing code if initiated
-            if (uiState.showPairingCode && uiState.generatedPairingCode != null) {
+            val pairingCode = uiState.generatedPairingCode
+            if (uiState.showPairingCode && pairingCode != null) {
                 PairingCodeCard(
-                    pairingCode = uiState.generatedPairingCode,
+                    pairingCode = pairingCode,
                     onCopyCode = viewModel::copyPairingCode,
                     modifier = Modifier.fillMaxWidth()
                 )
