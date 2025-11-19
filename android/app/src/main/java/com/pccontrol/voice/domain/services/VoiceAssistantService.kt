@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.pccontrol.voice.services.WebSocketManager
+import com.pccontrol.voice.data.repository.VoiceCommandRepository
 
 /**
  * Voice Assistant Foreground Service
@@ -55,6 +57,12 @@ class VoiceAssistantService : Service() {
     private var voiceCommandRepository: VoiceCommandRepository? = null
     private var webSocketManager: WebSocketManager? = null
     private var notificationManager: NotificationManagerCompat? = null
+
+    // Types for message handling
+    enum class CommandStatus { LISTENING, PROCESSING, EXECUTING, COMPLETED, ERROR }
+    data class CommandResult(val success: Boolean, val message: String)
+    enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
+    data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)
 
     // Service state tracking
     private var isRunning = false
@@ -104,7 +112,7 @@ class VoiceAssistantService : Service() {
         createNotificationChannel()
 
         // Initialize repository
-        voiceCommandRepository = VoiceCommandRepository.Factory(this).create()
+        voiceCommandRepository = VoiceCommandRepository(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -143,7 +151,7 @@ class VoiceAssistantService : Service() {
         audioCaptureService = AudioCaptureService.Factory(this).create()
 
         // Initialize WebSocket manager
-        webSocketManager = WebSocketManager.Factory(this).create()
+        webSocketManager = WebSocketManager.getInstance(this)
     }
 
     /**
@@ -243,7 +251,7 @@ class VoiceAssistantService : Service() {
 
                 // Listen for audio data and stream to PC
                 audioCaptureService?.audioDataFlow?.collect { audioData ->
-                    webSocketManager?.sendAudioData(audioData)
+                    webSocketManager?.sendAudioData(audioData, "audio/webm")
                 }
 
                 isListening = true
@@ -282,7 +290,9 @@ class VoiceAssistantService : Service() {
 
         try {
             webSocketManager?.let { ws ->
-                val connected = ws.connect()
+                // Note: Real WebSocketManager uses connectToPc(connectionId)
+                // This is a simplified connection attempt
+                val connected = false // Placeholder until proper connection ID is provided
 
                 if (connected) {
                     isConnected = true
@@ -314,10 +324,10 @@ class VoiceAssistantService : Service() {
      */
     private fun startWebSocketMonitoring() {
         serviceScope.launch {
-            webSocketManager?.messageFlow?.collect { message ->
-                handleMessage(message)
-                lastActivityTime = System.currentTimeMillis()
-            }
+            // Note: Real WebSocketManager doesn't expose messageFlow
+            // This monitoring would need to be implemented differently
+            // using the WebSocketClient's message handling
+            Log.d(TAG, "WebSocket monitoring started (implementation pending)")
         }
     }
 
@@ -385,7 +395,7 @@ class VoiceAssistantService : Service() {
     /**
      * Handle error message from PC
      */
-    private fun handleCommandResult(errorMessage: String) {
+    private fun handleErrorMessage(errorMessage: String) {
         Log.w(TAG, "Received error from PC: $errorMessage")
 
         // Show error notification
@@ -547,27 +557,7 @@ class VoiceAssistantService : Service() {
     /**
      * Service status for external queries
      */
-    fun isConnected(): Boolean = isConnected
-    fun isRunning(): Boolean = isRunning
-    fun isListening(): Boolean = isListening
-
-    // Import required types that would be defined elsewhere
-    // These would typically be in separate files
-    enum class CommandStatus { LISTENING, PROCESSING, EXECUTING, COMPLETED, ERROR }
-    data class CommandResult(val success: Boolean, val message: String)
-    enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
-    data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)
-
-    // WebSocket manager placeholder (would be implemented in WebSocketManager.kt)
-    class WebSocketManager(private val context: Context) {
-        val messageFlow: Flow<WebSocketMessage> = emptyFlow()
-        suspend fun connect(): Boolean = false
-        fun disconnect() {}
-        fun sendAudioData(data: ByteArray) {}
-        fun sendPong() {}
-
-        class Factory(private val context: Context) {
-            fun create(): WebSocketManager = WebSocketManager(context)
-        }
-    }
+    fun isConnectedToPC(): Boolean = isConnected
+    fun isServiceRunning(): Boolean = isRunning
+    fun isServiceListening(): Boolean = isListening
 }

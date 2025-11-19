@@ -236,15 +236,45 @@ class SpeechToTextService private constructor(
     }
 
     private suspend fun downloadModel(modelFile: File) {
-        // This would download the model from a server
-        // For now, we'll create a placeholder
-        modelFile.createNewFile()
+        /**
+         * Download Whisper model from server.
+         *
+         * Production implementation should:
+         * 1. Download from CDN or server: https://yourserver.com/models/whisper-tiny.bin
+         * 2. Verify checksum for integrity
+         * 3. Show download progress
+         * 4. Handle network errors with retry logic
+         *
+         * For development, manually place model in:
+         * ${context.filesDir}/whisper_models/$MODEL_NAME
+         */
+        if (!modelFile.exists()) {
+            Log.w(TAG, "Whisper model not found at ${modelFile.absolutePath}")
+            Log.w(TAG, "Please manually download and place the model file, or implement download logic")
+            throw IllegalStateException(
+                "Whisper model not available. " +
+                "Please download whisper-tiny.bin and place it in ${modelFile.parent}"
+            )
+        }
     }
 
     private fun getAudioDuration(audioFile: File): Int {
-        // This would use MediaMetadataRetriever to get duration
-        // For now, return a default
-        return 10 // 10 seconds default
+        /**
+         * Get audio file duration using MediaMetadataRetriever.
+         * Returns duration in seconds.
+         */
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            retriever.setDataSource(audioFile.absolutePath)
+            val durationStr = retriever.extractMetadata(
+                android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+            )
+            retriever.release()
+            (durationStr?.toLongOrNull() ?: 0L) / 1000 // Convert ms to seconds
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get audio duration, using default", e)
+            10 // 10 seconds default fallback
+        }.toInt()
     }
 
     private fun createTempAudioFile(audioData: ByteArray, sampleRate: Int): File {

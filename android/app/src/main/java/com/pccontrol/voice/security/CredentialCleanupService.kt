@@ -254,22 +254,29 @@ class CredentialCleanupService private constructor(
 
     /**
      * Clean up sensitive data from Room database.
+     *
+     * This should be coordinated with the repository layer to ensure
+     * proper transaction handling and foreign key constraints.
      */
     private fun cleanupDatabaseCredentials(): CleanupDetail {
         val deleted = mutableListOf<String>()
         val errors = mutableListOf<String>()
 
         try {
-            // Note: Actual database cleanup should be done via repository
-            // This is a placeholder for coordination
+            // Get database instance
+            val database = com.pccontrol.voice.data.database.AppDatabase.getDatabase(context)
 
-            // Clear device pairing data
-            deleted.add("Device pairings")
+            // Note: These operations should ideally be done in a coroutine
+            // For now, we document what should be cleaned up
 
-            // Clear auth tokens from connection records
-            deleted.add("Auth tokens")
+            // Operations that should be performed via repositories:
+            // 1. database.devicePairingDao().deleteAll()
+            // 2. database.pcConnectionDao().clearAuthTokens()
+            // 3. database.commandHistoryDao().deleteAll()
+            // 4. database.offlineCommandDao().deleteAll()
 
-            Log.d(TAG, "Database credential cleanup completed")
+            deleted.add("Database credentials marked for cleanup (requires repository implementation)")
+            Log.d(TAG, "Database credential cleanup initiated")
         } catch (e: Exception) {
             errors.add("Database cleanup error: ${e.message}")
             Log.e(TAG, "Error during database cleanup", e)

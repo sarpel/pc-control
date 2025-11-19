@@ -246,17 +246,56 @@ class PCDiscovery(private val context: Context) {
 
     /**
      * Discover PCs using SSDP (Simple Service Discovery Protocol).
+     *
+     * Full implementation would:
+     * 1. Send M-SEARCH multicast message to 239.255.255.250:1900
+     * 2. Listen for responses from PC Control Agent services
+     * 3. Parse SSDP responses for IP, MAC, and service details
+     * 4. Verify PC Control Agent service availability
+     *
+     * Reference: https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol
      */
     private suspend fun discoverBySSDP(): List<DiscoveredPC> {
         return try {
             Log.d(TAG, "Starting SSDP discovery")
 
-            // SSDP discovery would look for devices advertising themselves
-            // For MVP, this is a placeholder implementation
-            delay(1000) // Simulate discovery time
+            withContext(Dispatchers.IO) {
+                val socket = java.net.DatagramSocket()
+                socket.soTimeout = 2000 // 2 second timeout
 
-            emptyList() // Would return discovered PCs in real implementation
+                // SSDP M-SEARCH message
+                val searchMsg = """
+                    M-SEARCH * HTTP/1.1
+                    HOST: 239.255.255.250:1900
+                    MAN: "ssdp:discover"
+                    MX: 2
+                    ST: urn:schemas-upnp-org:service:PCVoiceControl:1
 
+                """.trimIndent().replace("\n", "\r\n")
+
+                val searchBytes = searchMsg.toByteArray()
+                val packet = java.net.DatagramPacket(
+                    searchBytes,
+                    searchBytes.size,
+                    java.net.InetAddress.getByName("239.255.255.250"),
+                    1900
+                )
+
+                try {
+                    socket.send(packet)
+                    Log.d(TAG, "SSDP discovery request sent")
+
+                    // Listen for responses (simplified - would need proper parsing)
+                    val discovered = mutableListOf<DiscoveredPC>()
+                    // Response parsing would be implemented here
+                    discovered
+                } catch (e: Exception) {
+                    Log.w(TAG, "SSDP discovery failed: ${e.message}")
+                    emptyList()
+                } finally {
+                    socket.close()
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error in SSDP discovery", e)
             emptyList()
@@ -264,18 +303,30 @@ class PCDiscovery(private val context: Context) {
     }
 
     /**
-     * Discover PCs using mDNS.
+     * Discover PCs using mDNS (Multicast DNS).
+     *
+     * Full implementation would use NsdManager:
+     * 1. Initialize NsdManager service
+     * 2. Register discovery listener for "_pcvoice._tcp" service type
+     * 3. Resolve discovered services to get IP addresses
+     * 4. Collect and return discovered PCs
+     *
+     * Reference: https://developer.android.com/training/connect-devices-wirelessly/nsd
      */
     private suspend fun discoverByMDNS(): List<DiscoveredPC> {
         return try {
             Log.d(TAG, "Starting mDNS discovery")
 
-            // mDNS would resolve .local services
-            // For MVP, this is a placeholder implementation
-            delay(1000)
+            withContext(Dispatchers.IO) {
+                // NsdManager-based discovery would be implemented here
+                // Example:
+                // val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+                // val serviceType = "_pcvoice._tcp."
+                // Register listener and collect results
 
-            emptyList() // Would return discovered PCs in real implementation
-
+                delay(2000) // Discovery timeout
+                emptyList() // Returns discovered services after implementation
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error in mDNS discovery", e)
             emptyList()

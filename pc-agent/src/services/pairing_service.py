@@ -79,10 +79,37 @@ class PairingService:
         logger.info("Pairing service initialized")
 
     def _load_jwt_secret(self) -> str:
-        """Load JWT secret from secure storage."""
-        # TODO: Load from Windows Credential Manager
-        # For MVP, generate a random secret (NOT PRODUCTION READY)
-        return secrets.token_urlsafe(32)
+        """
+        Load JWT secret from secure storage.
+
+        In production, this should use Windows Credential Manager:
+        - import keyring
+        - secret = keyring.get_password("PCVoiceControl", "jwt_secret")
+        - if not secret:
+        -     secret = secrets.token_urlsafe(32)
+        -     keyring.set_password("PCVoiceControl", "jwt_secret", secret)
+
+        For now, we use environment variable or generate a persistent secret.
+        """
+        import os
+        from pathlib import Path
+
+        # Try to load from environment variable first
+        env_secret = os.getenv("PC_VOICE_JWT_SECRET")
+        if env_secret:
+            return env_secret
+
+        # Otherwise, load or create a persistent secret file
+        secret_file = Path.home() / ".pcvoice" / "jwt_secret"
+        secret_file.parent.mkdir(exist_ok=True, mode=0o700)
+
+        if secret_file.exists():
+            return secret_file.read_text().strip()
+        else:
+            new_secret = secrets.token_urlsafe(32)
+            secret_file.write_text(new_secret)
+            secret_file.chmod(0o600)
+            return new_secret
 
     async def initiate_pairing(
         self,
