@@ -1208,6 +1208,18 @@ class SystemController:
         """
         return [op.value for op in OperationType]
 
+    def _is_admin(self) -> bool:
+        """Check if the process has admin privileges."""
+        try:
+            if self.os_type == "windows":
+                import ctypes
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            else:
+                import os
+                return os.geteuid() == 0
+        except Exception:
+            return False
+
     def health_check(self) -> Dict[str, Any]:
         """
         Perform health check on system controller.
@@ -1217,7 +1229,7 @@ class SystemController:
         """
         return {
             "os_type": self.os_type,
-            "admin_privileges": False,  # TODO: Implement admin check
+            "admin_privileges": self._is_admin(),
             "supported_operations": self.get_supported_operations(),
             "applications_mapped": len(self.applications),
             "temp_directory": str(self.temp_dir),

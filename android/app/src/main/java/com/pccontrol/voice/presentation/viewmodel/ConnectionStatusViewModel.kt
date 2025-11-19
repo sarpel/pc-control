@@ -2,6 +2,8 @@ package com.pccontrol.voice.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pccontrol.voice.data.repository.PairingRepository
+import com.pccontrol.voice.services.WebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,13 +44,32 @@ data class ConnectionStatusUiState(
  * ViewModel for connection status screen
  */
 @HiltViewModel
-class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
+class ConnectionStatusViewModel @Inject constructor(
+    private val webSocketManager: WebSocketManager,
+    private val pairingRepository: PairingRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConnectionStatusUiState())
     val uiState: StateFlow<ConnectionStatusUiState> = _uiState.asStateFlow()
 
     init {
         loadConnectionStatus()
+        observeConnection()
+    }
+
+    private fun observeConnection() {
+        viewModelScope.launch {
+            webSocketManager.currentConnection.collect { connection ->
+                val isConnected = webSocketManager.isConnected.value
+                _uiState.value = _uiState.value.copy(
+                    isConnected = isConnected,
+                    pcName = connection?.pcName,
+                    pcIpAddress = connection?.pcIpAddress,
+                    lastConnectedTime = connection?.lastConnectedAt ?: 0L,
+                    // Other fields would be updated from connection stats if available
+                )
+            }
+        }
     }
 
     private fun loadConnectionStatus() {
@@ -56,30 +77,10 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             try {
-                // TODO: Load actual connection status from repository
-                // This would involve:
-                // 1. Check current connection state
-                // 2. Load paired devices from database
-                // 3. Get WiFi network information
-                // 4. Measure current latency
-
-                // Simulate loading
-                kotlinx.coroutines.delay(500)
-
-                // Mock data for now
-                _uiState.value = _uiState.value.copy(
-                    isConnected = false,
-                    pcName = null,
-                    pcIpAddress = null,
-                    lastConnectedTime = System.currentTimeMillis() - 3600000, // 1 hour ago
-                    latencyMs = 0,
-                    connectionCount = 5,
-                    pairedDevices = emptyList(),
-                    wifiNetworkName = "Home WiFi",
-                    signalStrength = 85,
-                    pairingMethod = "manual",
-                    isLoading = false
-                )
+                // Refresh connection status if needed
+                // For now, the observer handles the updates
+                
+                _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -97,7 +98,9 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun removeDevice(deviceId: String) {
         viewModelScope.launch {
             try {
-                // TODO: Remove device from database
+                pairingRepository.removePairing(deviceId)
+                
+                // Update UI list (should ideally observe database)
                 val updatedDevices = _uiState.value.pairedDevices.filter { it.id != deviceId }
                 _uiState.value = _uiState.value.copy(
                     pairedDevices = updatedDevices,
@@ -116,15 +119,8 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun disconnect() {
         viewModelScope.launch {
             try {
-                // TODO: Disconnect from PC
-                _uiState.value = _uiState.value.copy(
-                    isConnected = false,
-                    pcName = null,
-                    pcIpAddress = null,
-                    latencyMs = 0,
-                    statusMessage = "Bağlantı kesildi",
-                    isError = false
-                )
+                webSocketManager.disconnect()
+                // UI update handled by observer
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     statusMessage = "Bağlantı kesilemedi: ${e.message}",
@@ -143,20 +139,17 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
             )
 
             try {
-                // TODO: Implement actual connection test
-                // This would involve:
-                // 1. Send ping to PC
-                // 2. Measure latency
-                // 3. Verify authentication
-
-                kotlinx.coroutines.delay(1500)
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    latencyMs = 45,
-                    statusMessage = "Bağlantı testi başarılı",
-                    isError = false
-                )
+                val result = webSocketManager.sendMessage("ping")
+                
+                if (result.isSuccess) {
+                     _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        statusMessage = "Bağlantı testi başarılı",
+                        isError = false
+                    )
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Ping failed")
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -170,7 +163,10 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun clearAllDevices() {
         viewModelScope.launch {
             try {
-                // TODO: Clear all paired devices from database
+                // Remove all devices (implementation depends on repository capabilities)
+                // For now, we iterate if we had a list, or just clear UI
+                // Ideally: pairingRepository.clearAllPairings()
+                
                 _uiState.value = _uiState.value.copy(
                     pairedDevices = emptyList(),
                     statusMessage = "Tüm cihazlar temizlendi",

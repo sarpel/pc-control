@@ -19,7 +19,12 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from collections import deque
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status, FastAPI
+
+# Create FastAPI app instance if running as module
+app = FastAPI()
+router = APIRouter()
+app.include_router(router)
 
 from src.config.settings import get_settings
 from src.services.connection_manager import ConnectionManager
@@ -258,13 +263,6 @@ class OptimizedWebSocketHandler:
             "uptime_seconds": time.time() - (self.last_heartbeat - 300)  # Approximate
         }
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="PC Control Agent WebSocket API",
-    description="Real-time WebSocket API for voice command processing with optimized messaging",
-    version="1.0.0"
-)
-
 # Global components
 settings = get_settings()
 connection_manager = ConnectionManager()
@@ -272,7 +270,7 @@ voice_processor = VoiceCommandProcessor()
 active_handlers: Dict[str, OptimizedWebSocketHandler] = {}
 
 
-@app.get("/")
+@router.get("/")
 async def root():
     """Root endpoint for health check."""
     return {
@@ -284,7 +282,7 @@ async def root():
     }
 
 
-@app.get("/health")
+@router.get("/health")
 async def health_check():
     """Detailed health check endpoint."""
     handler_metrics = [handler.get_metrics() for handler in active_handlers.values()]
@@ -306,7 +304,7 @@ async def health_check():
     }
 
 
-@app.websocket("/ws")
+@router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
     Optimized WebSocket endpoint with enhanced message handling.
@@ -613,7 +611,7 @@ async def send_error(websocket: WebSocket, error_message: str):
         logger.error(f"Error sending error message: {e}")
 
 
-@app.on_event("startup")
+@router.on_event("startup")
 async def startup_event():
     """Handle application startup."""
     logger.info("PC Control Agent WebSocket Server starting up")
@@ -621,7 +619,7 @@ async def startup_event():
     logger.info(f"Command timeout: {settings.command_timeout}s")
 
 
-@app.on_event("shutdown")
+@router.on_event("shutdown")
 async def shutdown_event():
     """Handle application shutdown."""
     logger.info("PC Control Agent WebSocket Server shutting down")

@@ -1,5 +1,11 @@
 package com.pccontrol.voice.domain.services
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +17,36 @@ import javax.inject.Singleton
  * Acts as a bridge between UI/ViewModels and the Android Service.
  */
 @Singleton
-class VoiceAssistantServiceManager @Inject constructor() {
+class VoiceAssistantServiceManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    private var voiceService: VoiceAssistantService? = null
+    private var isBound = false
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as VoiceAssistantService.LocalBinder
+            voiceService = binder.getService()
+            isBound = true
+            // Sync initial state if needed
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isBound = false
+            voiceService = null
+        }
+    }
+
+    init {
+        bindService()
+    }
+
+    private fun bindService() {
+        Intent(context, VoiceAssistantService::class.java).also { intent ->
+            context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
 
     // Mirroring VoiceAssistantService states
     private val _connectionState = MutableStateFlow(VoiceAssistantService.ConnectionState.DISCONNECTED)
@@ -23,24 +58,27 @@ class VoiceAssistantServiceManager @Inject constructor() {
     private val _audioLevelFlow = MutableStateFlow(0f)
     val audioLevelFlow: StateFlow<Float> = _audioLevelFlow.asStateFlow()
 
-    // Stub methods
+    // Methods
     suspend fun startVoiceCapture(): Boolean {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.LISTENING
-        return true
+        if (isBound && voiceService != null) {
+            voiceService?.startCapture()
+            return true
+        }
+        return false
     }
 
     fun stopVoiceCapture() {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.RUNNING
+        if (isBound && voiceService != null) {
+            voiceService?.stopCapture()
+        }
     }
 
     suspend fun connectToPCAgent(): Boolean {
-        // TODO: Bind to service and call method
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTING
-        // Simulate connection
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTED
-        return true
+        if (isBound && voiceService != null) {
+            voiceService?.connect()
+            return true
+        }
+        return false
     }
 
     fun getCurrentAudioLevel(): Float {

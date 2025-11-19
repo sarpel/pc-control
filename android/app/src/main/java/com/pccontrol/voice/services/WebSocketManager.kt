@@ -28,6 +28,10 @@ class WebSocketManager private constructor(private val context: Context) {
     private val _isConnected = MutableStateFlow(false)
     private val _currentConnection = MutableStateFlow<PCConnection?>(null)
 
+    // Message flow for subscribers
+    private val _messageFlow = MutableSharedFlow<WebSocketMessage>()
+    val messageFlow: SharedFlow<WebSocketMessage> = _messageFlow.asSharedFlow()
+
     // Coroutines
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var connectionJob: Job? = null
@@ -109,15 +113,14 @@ class WebSocketManager private constructor(private val context: Context) {
     }
 
     /**
-     * Disconnect from current PC connection.
+     * Disconnect from the current PC.
      */
     fun disconnect() {
-        connectionJob?.cancel()
-        messageListenerJob?.cancel()
-        webSocketClient?.disconnect()
-        webSocketClient = null
-        _isConnected.value = false
-        _currentConnection.value = null
+        scope.launch {
+            webSocketClient?.disconnect()
+            _isConnected.value = false
+            updateConnectionStatus(ConnectionStatus.DISCONNECTED)
+        }
     }
 
     /**
@@ -143,7 +146,17 @@ class WebSocketManager private constructor(private val context: Context) {
     /**
      * Send audio data for transcription.
      */
-    suspend fun sendAudioData(audioData: ByteArray, mimeType: String = "audio/webm"): Result<Unit> {
+    fun sendAudioData(audioData: ByteArray) {
+        scope.launch {
+            try {
+                webSocketClient?.sendAudioData(audioData, "audio/webm")
+            } catch (e: Exception) {
+                // Log error
+            }
+        }
+    }
+
+    suspend fun sendAudioDataWithResult(audioData: ByteArray, mimeType: String = "audio/webm"): Result<Unit> {
         return try {
             val success = webSocketClient?.sendAudioData(audioData, mimeType) ?: false
             if (success) {
@@ -223,6 +236,7 @@ class WebSocketManager private constructor(private val context: Context) {
             when (messageType) {
                 "auth_response" -> handleAuthResponse(json)
                 "command_result" -> handleCommandResult(json)
+                "transcription_result" -> handleTranscriptionResult(json)
                 "error" -> handleError(json)
                 "ping" -> handlePing(json)
                 else -> {
@@ -234,6 +248,12 @@ class WebSocketManager private constructor(private val context: Context) {
         } catch (e: Exception) {
             println("Error handling message: ${e.message}")
         }
+    }
+
+    private suspend fun handleTranscriptionResult(json: JSONObject) {
+        val text = json.optString("text")
+        val confidence = json.optDouble("confidence", 0.0).toFloat()
+        _messageFlow.emit(WebSocketMessage(MessageType.TRANSCRIPTION_RESULT, text, confidence))
     }
 
     private suspend fun handleAuthResponse(json: JSONObject) {
@@ -254,6 +274,12 @@ class WebSocketManager private constructor(private val context: Context) {
         // Store command result in database
         // This would be implemented based on your command tracking needs
         println("Command result: $commandId, Success: $success, Result: $result, Error: $errorMessage")
+        
+        _messageFlow.emit(WebSocketMessage(
+            MessageType.COMMAND_RESULT, 
+            CommandResult(success, result.takeIf { it.isNotEmpty() } ?: errorMessage), 
+            0f
+        ))
     }
 
     private suspend fun handleError(json: JSONObject) {
@@ -262,11 +288,26 @@ class WebSocketManager private constructor(private val context: Context) {
         println("WebSocket error: $errorCode - $errorMessage")
 
         updateConnectionStatus(ConnectionStatus.ERROR)
+        _messageFlow.emit(WebSocketMessage(MessageType.ERROR, errorMessage, 0f))
     }
 
     private suspend fun handlePing(json: JSONObject) {
-        // Respond to ping with pong
-        webSocketClient?.sendMessage("""{"type":"pong","timestamp":${System.currentTimeMillis()}}""")
+        // Respond with pong
+        val pong = JSONObject().apply {
+            put("type", "pong")
+            put("timestamp", System.currentTimeMillis())
+        }
+        sendMessage(pong.toString())
+    }
+
+    fun sendPong() {
+        scope.launch {
+            val pong = JSONObject().apply {
+                put("type", "pong")
+                put("timestamp", System.currentTimeMillis())
+            }
+            sendMessage(pong.toString())
+        }
     }
 
     private suspend fun updateConnectionStatus(status: ConnectionStatus) {
@@ -298,3 +339,8 @@ class WebSocketManager private constructor(private val context: Context) {
         scope.cancel()
     }
 }
+
+// Data classes for WebSocket messages
+data class CommandResult(val success: Boolean, val message: String)
+enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
+data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)

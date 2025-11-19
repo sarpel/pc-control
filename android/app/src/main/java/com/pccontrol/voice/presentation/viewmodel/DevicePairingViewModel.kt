@@ -3,8 +3,10 @@ package com.pccontrol.voice.presentation.viewmodel
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pccontrol.voice.data.repository.PairingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +34,9 @@ data class DevicePairingUiState(
  */
 @HiltViewModel
 class DevicePairingViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val pairingRepository: PairingRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DevicePairingUiState())
@@ -121,26 +125,36 @@ class DevicePairingViewModel @Inject constructor(
             )
 
             try {
-                // TODO: Implement actual pairing logic with PC agent
-                // This would involve:
-                // 1. Connecting to PC agent
-                // 2. Sending pairing code
-                // 3. Waiting for verification
-                // 4. Storing pairing credentials
+                // Get IP and PairingID from navigation arguments
+                val ip = savedStateHandle.get<String>("ipAddress")
+                val pairingId = savedStateHandle.get<String>("pairingId")
+                
+                if (ip == null || pairingId == null) {
+                    throw Exception("Missing pairing information")
+                }
 
-                // Simulate pairing delay
-                kotlinx.coroutines.delay(2000)
-
-                // Simulate success
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    statusMessage = "Eşleştirme başarılı! PC'ye bağlandı.",
-                    isError = false
+                val deviceId = android.provider.Settings.Secure.getString(
+                    context.contentResolver, 
+                    android.provider.Settings.Secure.ANDROID_ID
                 )
 
-                // Navigate back after successful pairing
-                kotlinx.coroutines.delay(1500)
-                // Navigation should be handled by the screen composable
+                val result = pairingRepository.verifyPairing(
+                    pairingId = pairingId,
+                    pairingCode = code,
+                    deviceId = deviceId,
+                    pcIpAddress = ip
+                )
+
+                if (result.isSuccess) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        statusMessage = "Eşleştirme başarılı! PC'ye bağlandı.",
+                        isError = false
+                    )
+                    // Navigation should be handled by the screen composable observing this state
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Pairing failed")
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

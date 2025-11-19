@@ -579,9 +579,17 @@ def get_pc_mac_address() -> str:
 def get_certificate_fingerprint(certificate) -> str:
     """Get SHA-256 fingerprint of certificate."""
     try:
-        # This would use proper certificate parsing
-        # For now, return a placeholder
-        cert_data = str(certificate)
-        return hashlib.sha256(cert_data.encode()).hexdigest()
-    except Exception:
+        if hasattr(certificate, 'fingerprint'):
+            # It's a cryptography.x509.Certificate object
+            from cryptography.hazmat.primitives import hashes
+            return certificate.fingerprint(hashes.SHA256()).hex()
+        elif isinstance(certificate, bytes):
+            # It's DER encoded bytes
+            return hashlib.sha256(certificate).hexdigest()
+        else:
+            # Fallback for other types (e.g. string representation)
+            cert_data = str(certificate)
+            return hashlib.sha256(cert_data.encode()).hexdigest()
+    except Exception as e:
+        logger.error(f"Error calculating certificate fingerprint: {e}")
         return ""

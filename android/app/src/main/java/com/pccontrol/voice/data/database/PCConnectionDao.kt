@@ -48,6 +48,9 @@ interface PCConnectionDao {
     @Query("UPDATE pc_connections SET connection_count = connection_count + 1, total_connection_time_ms = total_connection_time_ms + :additionalTime, last_connected_at = strftime('%s', 'now') WHERE connection_id = :connectionId")
     suspend fun updateConnectionStats(connectionId: String, additionalTime: Long)
 
+    @Query("DELETE FROM pc_connections")
+    suspend fun deleteAllConnections()
+
     @Query("DELETE FROM pc_connections WHERE status = 'disconnected' AND last_heartbeat < strftime('%s', 'now', '-7 days')")
     suspend fun cleanupOldConnections()
 }

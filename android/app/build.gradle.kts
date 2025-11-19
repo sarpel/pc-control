@@ -26,6 +26,19 @@ android {
 
         buildConfigField("String", "API_BASE_URL", "\"https://pc.local:8765\"")
         buildConfigField("int", "API_TIMEOUT_MS", "10000")
+
+        externalNativeBuild {
+            cmake {
+                cppFlags("")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version = "3.18.1"
+        }
     }
 
     buildTypes {
@@ -103,13 +116,13 @@ dependencies {
 
     // JSON
     implementation("org.json:json:20231013")
-    
+
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-    
+
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-    
+
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 

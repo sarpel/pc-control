@@ -48,7 +48,10 @@ interface DevicePairingDao {
     suspend fun updatePairingStatus(pairingId: String, status: String)
 
     @Query("UPDATE device_pairing SET expires_at = :expiresAt WHERE pairing_id = :pairingId")
-    suspend fun updatePairingExpiration(pairingId: String, expiresAt: Long)
+    suspend fun updatePairingExpiry(pairingId: String, expiresAt: Long)
+
+    @Query("DELETE FROM device_pairing")
+    suspend fun deleteAllPairings()
 
     @Query("DELETE FROM device_pairing WHERE expires_at < :timestamp AND status != 'completed'")
     suspend fun deleteExpiredPairings(timestamp: Long)

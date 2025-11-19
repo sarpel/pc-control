@@ -80,9 +80,19 @@ class PairingService:
 
     def _load_jwt_secret(self) -> str:
         """Load JWT secret from secure storage."""
-        # TODO: Load from Windows Credential Manager
-        # For MVP, generate a random secret (NOT PRODUCTION READY)
-        return secrets.token_urlsafe(32)
+        try:
+            import keyring
+            service_name = "pc-control-agent"
+            username = "jwt-secret"
+            
+            secret = keyring.get_password(service_name, username)
+            if not secret:
+                secret = secrets.token_urlsafe(32)
+                keyring.set_password(service_name, username, secret)
+            return secret
+        except Exception as e:
+            logger.warning(f"Failed to use keyring for JWT secret: {e}. Using temporary secret.")
+            return secrets.token_urlsafe(32)
 
     async def initiate_pairing(
         self,

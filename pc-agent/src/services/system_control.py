@@ -20,6 +20,7 @@ from enum import Enum
 from pathlib import Path
 import json
 import time
+from src.models.action import Action, ActionType as ModelActionType
 
 # Import CommandAction from command interpreter for proper integration
 try:
@@ -88,6 +89,19 @@ class SystemActionResult:
     return_code: Optional[int] = None
     stdout: Optional[str] = None
     stderr: Optional[str] = None
+    error_message: Optional[str] = None
+
+    @property
+    def data(self) -> Any:
+        """Alias for result_data to match Action model expectations."""
+        return self.result_data
+
+    @property
+    def error(self) -> Optional[str]:
+        """Alias for error_message (if we had one) or construct from stderr."""
+        if self.error_message:
+            return self.error_message
+        return self.stderr if self.stderr else ("Unknown error" if not self.success else None)
     error_message: Optional[str] = None
 
 
@@ -858,6 +872,57 @@ class SystemControlService:
 
         except Exception:
             return None
+
+    async def execute_action(self, action: Action) -> SystemActionResult:
+        """
+        Execute an Action from the new data model.
+        Adapts to internal SystemAction/CommandAction logic.
+        """
+        if action.action_type == ModelActionType.SYSTEM_FILE_FIND:
+            pattern = action.parameters.get("pattern", "*")
+            path = action.parameters.get("path", ".")
+            file_type = action.parameters.get("file_type")
+            max_results = action.parameters.get("max_results", 100)
+            
+            sys_action = SystemAction(
+                action_type="find_files",
+                parameters={
+                    "search_query": pattern,
+                    "search_path": path,
+                    "file_type": file_type,
+                    "max_results": max_results
+                }
+            )
+            return await self.find_files(sys_action)
+
+        elif action.action_type == ModelActionType.SYSTEM_FILE_DELETE:
+            file_path = action.parameters.get("file_path")
+            confirmed = action.parameters.get("confirmed", False)
+            
+            sys_action = SystemAction(
+                action_type="delete_file",
+                target=file_path,
+                parameters={
+                    "path": file_path,
+                    "force": confirmed
+                }
+            )
+            return await self.delete_file(sys_action)
+
+        elif action.action_type == ModelActionType.SYSTEM_INFO:
+            sys_action = SystemAction(
+                action_type="query_system_info",
+                parameters={}
+            )
+            return await self.get_system_info(sys_action)
+            
+        else:
+            return SystemActionResult(
+                success=False,
+                action_type=str(action.action_type),
+                execution_time_ms=0,
+                stderr=f"Unsupported action type: {action.action_type}"
+            )
 
     async def execute(self, action: CommandAction) -> Dict[str, Any]:
         """

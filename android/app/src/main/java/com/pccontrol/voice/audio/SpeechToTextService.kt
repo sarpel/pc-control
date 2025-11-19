@@ -242,9 +242,29 @@ class SpeechToTextService private constructor(
     }
 
     private suspend fun downloadModel(modelFile: File) {
-        // This would download the model from a server
-        // For now, we'll create a placeholder
-        modelFile.createNewFile()
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-tr.bin")
+                val connection = url.openConnection()
+                connection.connect()
+                
+                val input = BufferedInputStream(url.openStream())
+                val output = FileOutputStream(modelFile)
+                
+                val data = ByteArray(1024)
+                var count: Int
+                while (input.read(data).also { count = it } != -1) {
+                    output.write(data, 0, count)
+                }
+                
+                output.flush()
+                output.close()
+                input.close()
+            } catch (e: Exception) {
+                Log.e("SpeechToTextService", "Error downloading model", e)
+                throw e
+            }
+        }
     }
 
     private fun getAudioDuration(audioFile: File): Int {
@@ -368,9 +388,31 @@ class SpeechToTextService private constructor(
         private val threads: Int
     ) {
         companion object {
+            init {
+                try {
+                    System.loadLibrary("whisper_jni")
+                } catch (e: UnsatisfiedLinkError) {
+                    Log.e("WhisperModel", "Failed to load whisper_jni library", e)
+                }
+            }
+
             fun loadModel(modelPath: String, language: String, threads: Int): WhisperModel {
-                // This would be a JNI call to load the actual Whisper model
                 return WhisperModel(modelPath, language, threads)
+            }
+        }
+
+        // Native methods
+        private external fun init(modelPath: String, language: String, threads: Int): Long
+        private external fun free(contextPtr: Long)
+        private external fun fullTranscribe(contextPtr: Long, audioData: FloatArray): String
+
+        private var contextPtr: Long = 0
+
+        init {
+            try {
+                contextPtr = init(modelPath, language, threads)
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e("WhisperModel", "Native init failed", e)
             }
         }
 
@@ -381,26 +423,54 @@ class SpeechToTextService private constructor(
             noSpeechThreshold: Float = 0.6f,
             temperature: Float = 0.0f
         ): WhisperTranscriptionResult {
-            // This would be a JNI call to whisper.cpp
-            // For now, return a mock result
-            return WhisperTranscriptionResult(
-                text = "Merhaba dünya",
-                confidence = 0.95f,
-                language = language,
-                durationMs = 2000,
-                segments = listOf(
-                    WhisperSegment(
-                        text = "Merhaba dünya",
-                        startMs = 0,
-                        endMs = 2000,
-                        confidence = 0.95f
-                    )
-                )
-            )
+            if (contextPtr == 0L) {
+                return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
+            }
+            
+            return try {
+                val audioFile = File(audioPath)
+                if (!audioFile.exists()) {
+                    return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
+                }
+                
+                val audioData = readAudioFileToFloatArray(audioFile)
+                val text = fullTranscribe(contextPtr, audioData)
+                
+                // Parse result if it's JSON or structured, otherwise assume plain text
+                // For now assuming plain text return from JNI
+                WhisperTranscriptionResult(text, 1.0f, language, (audioData.size / 16000.0 * 1000).toLong(), emptyList())
+            } catch (e: Exception) {
+                Log.e("WhisperModel", "Transcription failed", e)
+                WhisperTranscriptionResult("", 0f, language, 0, emptyList())
+            }
         }
 
+        private fun readAudioFileToFloatArray(file: File): FloatArray {
+            val bytes = file.readBytes()
+            // Simple WAV header check/skip - assuming 16-bit PCM mono 16kHz
+            // WAV header is typically 44 bytes
+            val startOffset = if (file.name.endsWith(".wav", ignoreCase = true) && bytes.size > 44) 44 else 0
+            val shortCount = (bytes.size - startOffset) / 2
+            val floatArray = FloatArray(shortCount)
+            
+            for (i in 0 until shortCount) {
+                val byteIndex = startOffset + i * 2
+                if (byteIndex + 1 < bytes.size) {
+                    val low = bytes[byteIndex].toInt() and 0xFF
+                    val high = bytes[byteIndex + 1].toInt()
+                    val sample = (high shl 8) or low
+                    floatArray[i] = sample / 32768.0f
+                }
+            }
+            return floatArray
+        }
+
+
         fun cleanup() {
-            // Cleanup native resources
+            if (contextPtr != 0L) {
+                free(contextPtr)
+                contextPtr = 0
+            }
         }
     }
 

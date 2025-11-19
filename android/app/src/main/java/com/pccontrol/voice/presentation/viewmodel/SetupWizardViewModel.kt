@@ -2,6 +2,10 @@ package com.pccontrol.voice.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.pccontrol.voice.data.repository.PairingRepository
+import com.pccontrol.voice.network.PCDiscovery
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +44,7 @@ data class SetupWizardUiState(
     val selectedPC: DiscoveredPC? = null,
     val manualPCAddress: String = "",
     val pairingCode: String? = null,
+    val pairingId: String? = null,
     val isPairing: Boolean = false,
     val isVerifying: Boolean = false,
     val errorMessage: String? = null
@@ -49,7 +54,11 @@ data class SetupWizardUiState(
  * ViewModel for the setup wizard
  */
 @HiltViewModel
-class SetupWizardViewModel @Inject constructor() : ViewModel() {
+class SetupWizardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val pcDiscovery: PCDiscovery,
+    private val pairingRepository: PairingRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SetupWizardUiState())
     val uiState: StateFlow<SetupWizardUiState> = _uiState.asStateFlow()
@@ -96,24 +105,22 @@ class SetupWizardViewModel @Inject constructor() : ViewModel() {
                 errorMessage = null
             )
 
-            // TODO: Implement actual PC discovery logic
-            // Simulating discovery for now
-            kotlinx.coroutines.delay(2000)
+            try {
+                val pcs = pcDiscovery.discoverPCs()
+                val mappedPCs = pcs.map { 
+                    DiscoveredPC(it.id, it.name, it.ipAddress, it.isAvailable) 
+                }
 
-            // Mock discovered PCs
-            val mockPCs = listOf(
-                DiscoveredPC(
-                    id = "pc1",
-                    name = "Windows PC",
-                    ipAddress = "192.168.1.100",
-                    isAvailable = true
+                _uiState.value = _uiState.value.copy(
+                    isDiscovering = false,
+                    discoveredPCs = mappedPCs
                 )
-            )
-
-            _uiState.value = _uiState.value.copy(
-                isDiscovering = false,
-                discoveredPCs = mockPCs
-            )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isDiscovering = false,
+                    errorMessage = "Discovery failed: ${e.message}"
+                )
+            }
         }
     }
 
@@ -136,39 +143,108 @@ class SetupWizardViewModel @Inject constructor() : ViewModel() {
                 errorMessage = null
             )
 
-            // TODO: Implement actual pairing logic
-            kotlinx.coroutines.delay(1500)
+            try {
+                val selectedPC = _uiState.value.selectedPC
+                val manualIP = _uiState.value.manualPCAddress
+                val ip = selectedPC?.ipAddress ?: manualIP.takeIf { it.isNotBlank() }
+                
+                if (ip == null) {
+                    throw Exception("No PC selected or IP entered")
+                }
 
-            _uiState.value = _uiState.value.copy(
-                isPairing = false,
-                isVerifying = true
-            )
+                val deviceId = android.provider.Settings.Secure.getString(
+                    context.contentResolver, 
+                    android.provider.Settings.Secure.ANDROID_ID
+                )
 
-            // Auto-advance to verification
-            kotlinx.coroutines.delay(1000)
-            _uiState.value = _uiState.value.copy(isVerifying = false)
+                val result = pairingRepository.initiatePairing(
+                    deviceName = android.os.Build.MODEL,
+                    deviceId = deviceId,
+                    pcIpAddress = ip
+                )
+
+                if (result.isSuccess) {
+                    val response = result.getOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        isPairing = false,
+                        isVerifying = true,
+                        pairingCode = response?.pairing_code,
+                        pairingId = response?.pairing_id
+                    )
+                    // Start polling for status
+                    startVerificationPolling()
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Pairing initiation failed")
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isPairing = false,
+                    errorMessage = "Pairing failed: ${e.message}"
+                )
+            }
         }
     }
 
     fun retryVerification() {
+        startVerificationPolling()
+    }
+
+    private fun startVerificationPolling() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isVerifying = true,
                 errorMessage = null
             )
 
-            // TODO: Implement actual verification logic
-            kotlinx.coroutines.delay(1500)
+            val pairingId = _uiState.value.pairingId
+            val ip = _uiState.value.selectedPC?.ipAddress ?: _uiState.value.manualPCAddress
 
-            _uiState.value = _uiState.value.copy(isVerifying = false)
+            if (pairingId == null || ip.isBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    isVerifying = false,
+                    errorMessage = "Missing pairing information"
+                )
+                return@launch
+            }
+
+            var attempts = 0
+            while (attempts < 30) { // 1 minute timeout
+                delay(2000)
+                val result = pairingRepository.checkPairingStatus(pairingId, ip)
+
+                if (result.isSuccess) {
+                    val status = result.getOrNull()?.status
+                    if (status == "paired" || status == "confirmed") {
+                        finishSetup()
+                        return@launch
+                    } else if (status == "failed" || status == "rejected") {
+                        _uiState.value = _uiState.value.copy(
+                            isVerifying = false,
+                            errorMessage = "Pairing rejected or failed"
+                        )
+                        return@launch
+                    }
+                }
+                attempts++
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isVerifying = false,
+                errorMessage = "Verification timed out. Please try again."
+            )
         }
     }
 
     fun finishSetup() {
-        // TODO: Save setup completion and navigate to main screen
         viewModelScope.launch {
-            // Save pairing information
-            // Navigate to main activity
+            // Save setup completion state
+            val sharedPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            sharedPrefs.edit().putBoolean("setup_completed", true).apply()
+
+            _uiState.value = _uiState.value.copy(
+                currentStep = SetupStep.SUCCESS,
+                isVerifying = false
+            )
         }
     }
 }
