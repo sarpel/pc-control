@@ -50,11 +50,12 @@ import kotlinx.coroutines.flow.map
  *
  * Task: T120 [P] [US1] Create Quick Settings tile configuration and preferences in android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt
  */
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "quick_settings_preferences")
+
 class QuickSettingsConfig private constructor(
     private val context: Context
 ) {
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "quick_settings_preferences")
-
     // Preference keys
     companion object {
         private val KEY_TILE_ENABLED = booleanPreferencesKey("tile_enabled")

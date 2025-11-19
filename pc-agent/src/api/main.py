@@ -291,6 +291,6 @@ if __name__ == "__main__":
         port=settings.port,
         ssl_keyfile=settings.ssl_key_file,
         ssl_certfile=settings.ssl_cert_file,
-        reload=settings.debug_mode,
+        reload=settings.debug,
         log_level="info"
     )

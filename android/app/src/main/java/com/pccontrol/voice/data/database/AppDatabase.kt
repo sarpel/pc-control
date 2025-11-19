@@ -51,6 +51,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "pc_voice_assistant_database"
                 )
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addCallback(DatabaseCallback(context))
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

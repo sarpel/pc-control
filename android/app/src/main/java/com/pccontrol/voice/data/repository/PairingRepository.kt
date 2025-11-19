@@ -8,6 +8,8 @@ import com.pccontrol.voice.network.WebSocketClient
 import com.pccontrol.voice.security.KeyStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -126,9 +128,13 @@ class PairingRepository(
                     )
 
                     if (stored) {
-                        // Store auth token
+                        // Store auth token (encrypt + persist)
                         val encryptedToken = keyStoreManager.encryptSensitiveData(response.auth_token)
-                        val tokenStored = encryptedToken != null
+                        val tokenStored = encryptedToken?.let { token ->
+                            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+                            prefs.edit().putString("auth_token_$deviceId", token).apply()
+                            true
+                        } ?: false
 
                         if (tokenStored) {
                             Log.i(TAG, "Pairing completed successfully for device: $deviceId")
@@ -236,7 +242,10 @@ class PairingRepository(
     ): Result<Boolean> {
         return try {
             // Get stored auth token
-            val authToken = keyStoreManager.decryptSensitiveData("auth_token_$deviceId")
+            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+            val encryptedToken = prefs.getString("auth_token_$deviceId", null)
+            val authToken = encryptedToken?.let { keyStoreManager.decryptSensitiveData(it) }
+
             if (authToken == null) {
                 return Result.failure(Exception("Kimlik doğrulama anahtarı bulunamadı"))
             }
@@ -245,7 +254,7 @@ class PairingRepository(
             webSocketClient.connect()
 
             // Wait for connection to establish
-            kotlinx.coroutines.delay(2000)
+            webSocketClient.connectionState.first { it == com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED }
 
             // Check if connected
             val connected = webSocketClient.connectionState.value == 
