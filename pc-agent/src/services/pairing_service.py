@@ -24,9 +24,9 @@ from dataclasses import dataclass
 import asyncio
 import jwt
 
-from src.models.device_pairing import DevicePairing, PairingStatus
-from src.services.certificate_service import CertificateService
-from src.database.connection import Database
+from models.device_pairing import DevicePairing, PairingStatus
+from services.certificate_service import CertificateService
+from database.connection import Database
 
 logger = logging.getLogger(__name__)
 

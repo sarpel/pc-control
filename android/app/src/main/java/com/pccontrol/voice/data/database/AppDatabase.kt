@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
         OfflineCommandEntity::class,
         DevicePairingEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -41,9 +41,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun devicePairingDao(): DevicePairingDao
 
     companion object {
-        const val DATABASE_NAME = "pc_voice_assistant.db"
-        const val DATABASE_VERSION = 3
-
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -52,24 +49,18 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    DATABASE_NAME
+                    "pc_voice_assistant_database"
                 )
-                    .addMigrations(
-                        MIGRATION_1_2,
-                        MIGRATION_2_3
-                    )
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(DatabaseCallback(context))
-                    .fallbackToDestructiveMigration() // Enable for development
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
-
-        fun destroyInstance() {
-            INSTANCE?.close()
-            INSTANCE = null
-        }
+        
+        fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 
     /**
@@ -99,17 +90,18 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private fun createInitialSettings(db: SupportSQLiteDatabase) {
+            val currentTime = System.currentTimeMillis()
             // Insert default app settings
             db.execSQL("""
-                INSERT INTO app_settings (key, value, category) VALUES
-                ('max_command_history', '5', 'general'),
-                ('enable_offline_mode', 'true', 'general'),
-                ('auto_reconnect', 'true', 'connection'),
-                ('connection_timeout_ms', '10000', 'connection'),
-                ('audio_quality', 'high', 'audio'),
-                ('enable_notifications', 'true', 'general'),
-                ('dark_mode', 'false', 'appearance'),
-                ('language', 'tr', 'general')
+                INSERT INTO app_settings (key, value, category, description, is_encrypted, created_at, updated_at) VALUES
+                ('max_command_history', '5', 'general', 'Maximum number of commands to keep in history', 0, $currentTime, $currentTime),
+                ('enable_offline_mode', 'true', 'general', 'Enable offline command processing', 0, $currentTime, $currentTime),
+                ('auto_reconnect', 'true', 'connection', 'Automatically reconnect to PC', 0, $currentTime, $currentTime),
+                ('connection_timeout_ms', '10000', 'connection', 'Connection timeout in milliseconds', 0, $currentTime, $currentTime),
+                ('audio_quality', 'high', 'audio', 'Audio recording quality setting', 0, $currentTime, $currentTime),
+                ('enable_notifications', 'true', 'general', 'Enable push notifications', 0, $currentTime, $currentTime),
+                ('dark_mode', 'false', 'appearance', 'Enable dark mode theme', 0, $currentTime, $currentTime),
+                ('language', 'tr', 'general', 'Application language setting', 0, $currentTime, $currentTime)
             """.trimIndent())
         }
 
@@ -185,6 +177,22 @@ abstract class AppDatabase : RoomDatabase() {
             // Update existing data with timestamps if needed
             database.execSQL("UPDATE pc_connections SET last_connected_at = created_at WHERE last_connected_at IS NULL")
             database.execSQL("UPDATE pc_connections SET last_heartbeat = created_at WHERE last_heartbeat IS NULL")
+        }
+    }
+
+    /**
+     * Migration from version 3 to 4.
+     * Add missing columns to AppSettings table.
+     */
+    object MIGRATION_3_4 : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Add missing columns to app_settings table
+            val currentTime = System.currentTimeMillis()
+            
+            database.execSQL("ALTER TABLE app_settings ADD COLUMN description TEXT")
+            database.execSQL("ALTER TABLE app_settings ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("ALTER TABLE app_settings ADD COLUMN created_at INTEGER NOT NULL DEFAULT $currentTime")
+            database.execSQL("ALTER TABLE app_settings ADD COLUMN updated_at INTEGER NOT NULL DEFAULT $currentTime")
         }
     }
 }

@@ -26,8 +26,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 import ipaddress
 
-from src.models.device_pairing import DevicePairing, PairingStatus
-from src.database.connection import Database
+from models.device_pairing import DevicePairing, PairingStatus
+from database.connection import Database
 
 logger = logging.getLogger(__name__)
 
@@ -493,6 +493,15 @@ class PairingValidator:
             # Verify authority key identifier
             # Verify signature
             # Verify validity periods
+
+            # For MVP, we'll just verify the certificate exists and is not expired
+            if not client_certificate:
+                raise ValueError("Client certificate is required")
+            
+            # Check if certificate is expired
+            now = datetime.utcnow()
+            if client_certificate.not_valid_after < now:
+                raise ValueError("Client certificate has expired")
 
         except Exception as e:
             logger.error(f"Error validating certificate chain: {e}")

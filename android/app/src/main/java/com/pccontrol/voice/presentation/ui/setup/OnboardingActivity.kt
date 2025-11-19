@@ -1,5 +1,8 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.pccontrol.voice.presentation.ui.setup
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,8 +22,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -89,7 +95,7 @@ fun OnboardingScreen(
                 title = "Hoş Geldiniz!", // "Welcome!"
                 description = "PC'nizi sesli komutlarla kontrol edin. Türkçe komutlarla bilgisayarınızı kolayca yönetin.",
                 // "Control your PC with voice commands. Easily manage your computer with Turkish commands."
-                icon = Icons.Default.Waving,
+                icon = Icons.Default.WavingHand,
                 tips = listOf(
                     "Telefon ve PC aynı WiFi ağında olmalı",
                     "Güvenli bağlantı için tek seferlik eşleştirme gerekir",
@@ -144,7 +150,7 @@ fun OnboardingScreen(
                 title = "Başlayalım!", // "Let's Start!"
                 description = "Hemen eşleştirme işlemini başlatarak PC'nizi kontrol etmeye başlayın.",
                 // "Start pairing now to begin controlling your PC."
-                icon = Icons.Default.RocketLaunch,
+                icon = Icons.Default.Rocket,
                 tips = listOf(
                     "PC'de servis uygulamasını çalıştırın",
                     "Android uygulamada eşleştirme kodunu girin",

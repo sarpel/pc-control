@@ -121,7 +121,7 @@ class AudioProcessingService private constructor(
         } catch (e: Exception) {
             isProcessing.set(false)
             _processingState.value = ProcessingState.ERROR
-            _errors.emit(AudioProcessingError.RecordingError(e))
+            _errors.emit(AudioProcessingError.RecordingError(message = e.message, cause = e))
             Result.failure(e)
         }
     }
@@ -160,7 +160,7 @@ class AudioProcessingService private constructor(
         } catch (e: Exception) {
             isProcessing.set(false)
             _processingState.value = ProcessingState.ERROR
-            _errors.emit(AudioProcessingError.TranscriptionError(e))
+            _errors.emit(AudioProcessingError.TranscriptionError(message = e.message, cause = e))
             Result.failure(e)
         }
     }
@@ -182,7 +182,7 @@ class AudioProcessingService private constructor(
             Result.success(Unit)
 
         } catch (e: Exception) {
-            _errors.emit(AudioProcessingError.CancellationError(e))
+            _errors.emit(AudioProcessingError.CancellationError(message = e.message, cause = e))
             Result.failure(e)
         }
     }
@@ -204,7 +204,7 @@ class AudioProcessingService private constructor(
 
         } catch (e: Exception) {
             _processingState.value = ProcessingState.ERROR
-            _errors.emit(AudioProcessingError.TranscriptionError(e))
+            _errors.emit(AudioProcessingError.TranscriptionError(message = e.message, cause = e))
             Result.failure(e)
         }
     }
@@ -237,7 +237,7 @@ class AudioProcessingService private constructor(
                             // Recording cancelled
                         }
                         AudioRecorder.RecordingState.ERROR -> {
-                            _errors.emit(AudioProcessingError.RecordingError(Exception("Recording error")))
+                            _errors.emit(AudioProcessingError.RecordingError(message = "Recording error"))
                         }
                         else -> {
                             // Other states

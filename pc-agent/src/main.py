@@ -13,8 +13,8 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 
-from src.api.websocket_server import app
-from src.config.settings import get_settings
+from api.websocket_server import app
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 

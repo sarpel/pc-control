@@ -358,7 +358,7 @@ fun isSystemProtectedPath(path: String): Boolean {
         "C:\\Program Files (x86)",
         "C:\\ProgramData",
         "C:\\System Volume Information",
-        "C:\\$Recycle.Bin"
+        "C:\\\$Recycle.Bin"
     )
 
     val normalizedPath = File(path).absolutePath

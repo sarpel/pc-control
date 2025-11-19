@@ -181,8 +181,14 @@ class SpeechToTextService private constructor(
                 totalLength += audioData.size
 
                 // Process when we have enough data (e.g., 2 seconds)
-                if (totalLength >= sampleRate * 2 * 2) { // 2 seconds of 16-bit audio
-                    val combinedData = buffer.toByteArray()
+                if (totalLength >= options.sampleRate * 2 * 2) { // 2 seconds of 16-bit audio
+                    val combinedData = ByteArray(totalLength).also { result ->
+                        var offset = 0
+                        buffer.forEach { data ->
+                            data.copyInto(result, offset)
+                            offset += data.size
+                        }
+                    }
                     buffer.clear()
                     totalLength = 0
 

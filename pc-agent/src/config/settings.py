@@ -101,6 +101,11 @@ class Settings(BaseSettings):
         default="development", description="Environment (development/staging/production)"
     )
 
+    # Development
+    debug: bool = Field(default=False, description="Enable debug mode")
+    validate_api_keys: bool = Field(default=True, description="Validate API keys")
+    validate_certificates: bool = Field(default=True, description="Validate certificates")
+
     @property
     def is_production(self) -> bool:
         """Check if running in production mode."""

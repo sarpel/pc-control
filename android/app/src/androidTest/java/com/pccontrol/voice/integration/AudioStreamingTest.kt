@@ -62,7 +62,7 @@ class AudioStreamingTest {
         // assertEquals("Sample rate should be 16kHz", 16000, audioService.sampleRate)
         // assertEquals("Channels should be MONO", 1, audioService.channels)
 
-        fail("Test not yet implemented - waiting for T050 (AudioCaptureService)")
+        fail("Test not yet implemented - waiting for T050 (AudioCaptureService). Params: $sampleRate, $channels, $encoding")
     }
 
     @Test
@@ -109,7 +109,7 @@ class AudioStreamingTest {
         // assertEquals("Frame size should be 20ms", expectedFrameSize, config.frameSizeMs)
         // assertEquals("Channels should be 1 (MONO)", expectedChannels, config.channels)
 
-        fail("Test not yet implemented - waiting for T020 (AudioStreamer)")
+        fail("Test not yet implemented - waiting for T020 (AudioStreamer). Expected: $expectedSampleRate, $expectedBitrate, $expectedFrameSize, $expectedChannels")
     }
 
     @Test
@@ -129,7 +129,7 @@ class AudioStreamingTest {
         //     opusFrame.size in 40..100
         // )
 
-        fail("Test not yet implemented - waiting for T020 (AudioStreamer)")
+        fail("Test not yet implemented - waiting for T020 (AudioStreamer). Samples: ${pcmSamples.size}")
     }
 
     @Test
@@ -154,7 +154,7 @@ class AudioStreamingTest {
         //     assertEquals("Sequence should be $i", i.toLong(), sequence)
         // }
 
-        fail("Test not yet implemented - waiting for T020 (AudioStreamer)")
+        fail("Test not yet implemented - waiting for T020 (AudioStreamer). CommandId: $commandId")
     }
 
     @Test
@@ -191,7 +191,7 @@ class AudioStreamingTest {
         //     mockWebSocket.messages.last().type
         // )
 
-        fail("Test not yet implemented - waiting for T018 (WebSocketClient) and T020 (AudioStreamer)")
+        fail("Test not yet implemented - waiting for T018 (WebSocketClient) and T020 (AudioStreamer). CommandId: $commandId")
     }
 
     @Test
@@ -213,7 +213,7 @@ class AudioStreamingTest {
         // Assert: Latency under 200ms requirement
         // assertTrue("Latency should be < 200ms, was ${latency}ms", latency < 200)
 
-        fail("Test not yet implemented - waiting for T050 and T020")
+        fail("Test not yet implemented - waiting for T050 and T020. Latency: $latency")
     }
 
     @Test
@@ -238,7 +238,7 @@ class AudioStreamingTest {
         // Assert: Speech detected
         // assertTrue("Speech should be detected", isSpeech2)
 
-        fail("Test not yet implemented - waiting for VAD implementation")
+        fail("Test not yet implemented - waiting for VAD implementation. Samples: ${silenceAudio.size}, ${speechAudio.size}")
     }
 
     @Test

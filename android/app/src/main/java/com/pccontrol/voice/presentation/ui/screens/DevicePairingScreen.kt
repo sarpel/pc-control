@@ -39,7 +39,7 @@ fun DevicePairingScreen(
                     }
                 }
             )
-        )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -120,7 +120,6 @@ fun DevicePairingScreen(
                         placeholder = { Text("123456") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        maxLength = 6,
                         isError = uiState.pairingCodeError != null,
                         supportingText = uiState.pairingCodeError?.let {
                             { Text(it) }
@@ -130,9 +129,10 @@ fun DevicePairingScreen(
             }
 
             // Step 3 - Show pairing code if initiated
-            if (uiState.showPairingCode && uiState.generatedPairingCode != null) {
+            val pairingCode = uiState.generatedPairingCode
+            if (uiState.showPairingCode && pairingCode != null) {
                 PairingCodeCard(
-                    pairingCode = uiState.generatedPairingCode,
+                    pairingCode = pairingCode,
                     onCopyCode = viewModel::copyPairingCode,
                     modifier = Modifier.fillMaxWidth()
                 )

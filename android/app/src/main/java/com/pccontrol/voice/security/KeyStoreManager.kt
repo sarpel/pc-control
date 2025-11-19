@@ -80,7 +80,7 @@ class KeyStoreManager private constructor(private val context: Context) {
         }
     }
 
-    @Throws(NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException)
+    @Throws(NoSuchAlgorithmException::class, NoSuchProviderException::class, InvalidAlgorithmParameterException::class)
     private fun generateRSAKeyPairAPI23(): KeyPair {
         val keyPairGenerator = KeyPairGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_RSA, ANDROID_KEYSTORE
@@ -90,7 +90,7 @@ class KeyStoreManager private constructor(private val context: Context) {
             KEYSTORE_ALIAS,
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         )
-            .setAlgorithmParameterSpec(RSAKeyGenParameterSpec(RSA_KEY_SIZE))
+            .setAlgorithmParameterSpec(RSAKeyGenParameterSpec(RSA_KEY_SIZE, BigInteger.valueOf(65537L)))
             .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
             .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
             .setCertificateSubject(X500Principal("CN=PC Voice Assistant Client"))
@@ -103,7 +103,7 @@ class KeyStoreManager private constructor(private val context: Context) {
         return keyPairGenerator.generateKeyPair()
     }
 
-    @Throws(NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException)
+    @Throws(NoSuchAlgorithmException::class, NoSuchProviderException::class, InvalidAlgorithmParameterException::class)
     private fun generateRSAKeyPairLegacy(): KeyPair {
         val startDate = Calendar.getInstance()
         val endDate = Calendar.getInstance()
@@ -145,6 +145,37 @@ class KeyStoreManager private constructor(private val context: Context) {
             privateKeyEntry?.privateKey
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get RSA private key", e)
+            null
+        }
+    }
+    
+    /**
+     * Get private key from KeyStore (alias for getRSAPrivateKey).
+     */
+    fun getPrivateKey(): PrivateKey? = getRSAPrivateKey()
+    
+    /**
+     * Get client certificate from KeyStore.
+     */
+    fun getClientCertificate(): ByteArray? {
+        return try {
+            val certificate = getCertificate()
+            certificate?.encoded
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get client certificate", e)
+            null
+        }
+    }
+    
+    /**
+     * Get CA certificate from KeyStore.
+     */
+    fun getCaCertificate(): ByteArray? {
+        return try {
+            val certEntry = keyStore.getCertificate(CERTIFICATE_ALIAS)
+            certEntry?.encoded
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get CA certificate", e)
             null
         }
     }
@@ -308,7 +339,7 @@ class KeyStoreManager private constructor(private val context: Context) {
 
             // Store AES key in KeyStore
             val keyEntry = KeyStore.SecretKeyEntry(newKey)
-            val protectionParameter = KeyProtectionParameter.Builder(
+            val protectionParameter = android.security.keystore.KeyProtection.Builder(
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             ).setBlockModes(BLOCK_MODE)
                 .setEncryptionPaddings(PADDING)

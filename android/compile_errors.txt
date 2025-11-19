@@ -1,0 +1,276 @@
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/models/DevicePairing.kt:48:36 Unresolved reference: createdBy
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/models/DevicePairing.kt:108:13 Cannot find a parameter with this name: createdBy
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:70:63 Unresolved reference: pairingId
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:123:50 Unresolved reference: caCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:124:54 Unresolved reference: clientCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:125:53 Unresolved reference: clientPrivateKey
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:130:59 Unresolved reference: storeAuthToken
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:130:93 Unresolved reference: authToken
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:238:45 Unresolved reference: getAuthToken
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:244:45 Unresolved reference: connectSecure
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:254:36 Type mismatch: inferred type is String but UUID was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:257:21 Cannot find a parameter with this name: connectionStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:258:21 Cannot find a parameter with this name: authenticationState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:259:21 Cannot find a parameter with this name: establishedAt
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:259:21 No value passed for parameter 'pcMacAddress'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:259:21 No value passed for parameter 'status'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:279:62 Too many arguments for public final fun getCertificate(): Certificate? defined in com.pccontrol.voice.security.KeyStoreManager
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:280:73 Too many arguments for public final fun getCertificateFingerprint(): String? defined in com.pccontrol.voice.security.KeyStoreManager
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:281:45 Unresolved reference: getAuthToken
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:286:21 Cannot find a parameter with this name: androidDeviceName
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:287:21 Cannot find a parameter with this name: caCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:288:21 Cannot find a parameter with this name: clientCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:289:21 Cannot find a parameter with this name: authToken
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 Cannot find a parameter with this name: pairingStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'pairingId'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'androidFingerprint'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'pcFingerprint'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'pairingCode'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'createdAt'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:290:21 No value passed for parameter 'expiresAt'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:312:29 Unresolved reference: storeCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:318:29 Unresolved reference: storeCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:324:42 Unresolved reference: storeCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:345:36 Type mismatch: inferred type is UUID but String! was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:356:29 Unresolved reference: deleteCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:357:29 Unresolved reference: deleteCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:358:29 Unresolved reference: deleteKey
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:359:29 Unresolved reference: deleteKey
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/PairingRepository.kt:376:31 Unresolved reference: HTTP_INTERNAL_SERVER_ERROR
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:38:61 Unresolved reference: createDataStore
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:70:38 Type mismatch: inferred type is Flow<Unit> but Flow<TileStateRepository.TileState> was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:70:57 Type mismatch: inferred type is Unit but TileStateRepository.TileState was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:72:19 Unresolved reference: fromValue
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:273:16 Type mismatch: inferred type is Flow<TileStateRepository.TileStateExport> but TileStateRepository.TileStateExport was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:273:31 Type mismatch: inferred type is Flow<TileStateRepository.TileStateExport> but TileStateRepository.TileStateExport was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt:367:47 Unresolved reference: CONNECTING
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:55:41 Unresolved reference: VoiceCommandRepository
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:107:34 Unresolved reference: VoiceCommandRepository
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:336:17 Unresolved reference: handleErrorMessage
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:351:39 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:369:39 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt:371:46 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/AudioStreamer.kt:43:57 Type mismatch: inferred type is String but Int was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/PCDiscovery.kt:193:61 Function invocation 'first()' expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/PCDiscovery.kt:193:82 Function invocation 'last()' expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/PCDiscovery.kt:346:28 Type mismatch: inferred type is InetAddress! but SocketAddress! was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/WebSocketClient.kt:257:73 Unresolved reference: ByteString
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/network/WebSocketClient.kt:293:65 Unresolved reference: pow
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:37:15 Conflicting declarations: public companion object, public companion object
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:266:35 Unresolved reference: VoiceAssistantActivity
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:268:22 Unresolved reference: ACTION_VOICE_COMMAND
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:365:5 Only one companion object is allowed per class
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:365:15 Conflicting declarations: public companion object, public companion object
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:373:52 Unresolved reference: appcompat
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:374:5 'onCreate' overrides nothing
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:374:47 Unresolved reference: Bundle
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:375:15 Unresolved reference: onCreate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:378:18 Unresolved reference: appcompat
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:384:43 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/QuickSettingsTileService.kt:384:51 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/DeletionConfirmationDialog.kt:361:15 Unresolved reference: Recycle
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/NetworkQualityIndicator.kt:242:41 None of the following functions can be called with the arguments supplied: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/NetworkQualityIndicator.kt:248:22 Overload resolution ambiguity: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/PairingCodeCard.kt:53:22 Unresolved reference: background
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:50:61 Unresolved reference: createDataStore
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:272:30 Unresolved reference: Icons
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:278:9 Unresolved reference: LazyColumn
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:286:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:287:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:295:42 Unresolved reference: FontWeight
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:357:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:358:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:366:42 Unresolved reference: FontWeight
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:401:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:402:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:410:42 Unresolved reference: FontWeight
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:449:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:450:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:458:42 Unresolved reference: FontWeight
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:497:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:498:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:506:42 Unresolved reference: FontWeight
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:553:13 Unresolved reference: item
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/QuickSettingsConfig.kt:554:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:315:85 Unresolved reference: Close
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:341:79 Unresolved reference: CheckCircle
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:342:77 Unresolved reference: Error
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:343:79 Unresolved reference: Warning
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:344:76 Unresolved reference: Info
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:345:63 Unresolved reference: Info
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:369:40 Unresolved reference: MutableInteractionSource
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:370:40 Unresolved reference: collectIsPressedAsState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VisualFeedbackSystem.kt:377:5 None of the following functions can be called with the arguments supplied: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:47:34 Type mismatch: inferred type is Double but Float was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:48:17 Unresolved reference: delay
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:76:22 Unresolved reference: scale
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:157:30 Not enough information to infer type variable R
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:162:13 Not enough information to infer type variable A
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:163:17 Cannot find a parameter with this name: radius
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:164:17 Cannot find a parameter with this name: color
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:169:17 Cannot find a parameter with this name: alpha
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:169:17 No value passed for parameter 'first'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:169:17 No value passed for parameter 'second'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:169:17 No value passed for parameter 'third'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:173:17 Overload resolution ambiguity: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/components/VoiceCommandButton.kt:173:27 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:27:30 Unresolved reference: viewModels
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:29:27 Unresolved reference: compose
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:57:28 Unresolved reference: CommandStatusViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:57:54 Unresolved reference: viewModels
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:80:28 Unresolved reference: lifecycleScope
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:81:51 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:84:24 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:87:24 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:90:24 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:93:24 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:109:16 Unresolved reference: CommandStatusViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:143:42 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:170:56 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:184:22 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:191:17 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:192:17 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:193:17 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:215:25 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:216:25 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:217:25 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:225:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:226:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:227:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:232:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:233:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:234:21 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:239:36 Unresolved reference: ConnectionState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:257:20 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:258:21 Unresolved reference: VoiceCommand
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:279:32 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:280:32 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:281:32 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:282:32 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:290:28 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:291:28 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:292:28 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:293:28 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:313:35 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:314:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:315:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:317:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:319:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:323:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:324:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:326:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:327:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:370:86 Type mismatch: inferred type is Dp but Double was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:375:30 None of the following functions can be called with the arguments supplied: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:450:20 Unresolved reference: VoiceCommand
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:488:23 Type mismatch: inferred type is List<[Error type: Unresolved type for VoiceCommand]> but Int was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:500:33 Unresolved reference: VoiceCommand
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:509:17 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:510:17 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:515:17 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:516:17 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:531:42 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:532:17 Overload resolution ambiguity: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:534:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/main/CommandStatusFragment.kt:535:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:18:51 Unresolved reference: ConnectionStatusViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:27:16 Unresolved reference: ConnectionStatusViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:27:44 Not enough information to infer type variable VM
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:127:47 Overload resolution ambiguity: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:127:57 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:128:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/ConnectionStatusScreen.kt:214:67 Unresolved reference: it
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:19:51 Unresolved reference: DevicePairingViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:28:16 Unresolved reference: DevicePairingViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:28:41 Not enough information to infer type variable VM
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:116:21 None of the following functions can be called with the arguments supplied: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:119:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:120:41 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/screens/DevicePairingScreen.kt:125:36 Unresolved reference: it
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:92:38 Unresolved reference: Waving
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:157:22 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:163:31 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:163:42 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:170:31 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:170:42 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:174:29 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:174:40 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:175:29 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:175:40 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:175:60 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:175:71 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:183:29 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:183:40 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:184:29 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:184:40 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:184:60 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:184:71 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:192:9 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:193:21 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:200:29 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:200:40 This foundation API is experimental and is likely to change or be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/OnboardingActivity.kt:345:14 Unresolved reference: graphicsLayer
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:23:51 Unresolved reference: SetupWizardViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:53:16 Unresolved reference: SetupWizardViewModel
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:59:9 Unresolved reference: SetupStep
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:62:9 Unresolved reference: SetupStep
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:64:30 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:68:9 Unresolved reference: SetupStep
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:74:9 Unresolved reference: SetupStep
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:79:9 Unresolved reference: SetupStep
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:168:14 Unresolved reference: SetupWizardUiState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:169:20 Unresolved reference: DiscoveredPC
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:222:35 Overload resolution ambiguity: 
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:222:45 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:223:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:228:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:243:27 @Composable invocations can only happen from the context of a @Composable function
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:276:9 Unresolved reference: DiscoveredPC
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:280:5 This material API is experimental and is likely to change or to be removed in the future.
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:335:14 Unresolved reference: SetupWizardUiState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/ui/setup/SetupWizardActivity.kt:512:14 Unresolved reference: SetupWizardUiState
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:65:28 Unresolved reference: BufferOverflow
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:105:46 Comparison of incompatible enums 'VoiceAssistantServiceManager.ServiceState' and '[Error type: Error property type]' is always unsuccessful
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:105:62 Unresolved reference: VoiceAssistantService
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:288:51 Unresolved reference: CommandStatus
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:327:17 Unresolved reference: VoiceAssistantService
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:328:16 'when' expression must be exhaustive, add necessary 'else' branch
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:337:17 Unresolved reference: VoiceAssistantService
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/CommandStatusViewModel.kt:338:16 'when' expression must be exhaustive, add necessary 'else' branch
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/VoiceCommandViewModel.kt:57:28 Unresolved reference: isValid
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/VoiceCommandViewModel.kt:59:48 Unresolved reference: transcription
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/VoiceCommandViewModel.kt:64:37 Type mismatch: inferred type is Result<AudioProcessingService.VoiceCommandResult> but AudioProcessingService.VoiceCommandResult was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/presentation/viewmodel/VoiceCommandViewModel.kt:119:41 Type mismatch: inferred type is String? but String was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/CertificateValidator.kt:455:65 Type mismatch: inferred type is Array<X509Certificate> but Array<Certificate> was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:83:13 Classifier 'NoSuchAlgorithmException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:83:39 Classifier 'NoSuchProviderException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:83:64 Classifier 'InvalidAlgorithmParameterException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:93:63 No value passed for parameter 'p1'
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:106:13 Classifier 'NoSuchAlgorithmException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:106:39 Classifier 'NoSuchProviderException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:106:64 Classifier 'InvalidAlgorithmParameterException' does not have a companion object, and thus must be initialized here
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/security/KeyStoreManager.kt:311:39 Unresolved reference: KeyProtectionParameter
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryMonitor.kt:197:20 Type mismatch: inferred type is Unit but BatteryInfo? was expected
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryMonitor.kt:209:80 Unresolved reference: BATTERY_PROPERTY_TEMPERATURE
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryMonitor.kt:210:76 Unresolved reference: BATTERY_PROPERTY_VOLTAGE
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:307:17 Val cannot be reassigned
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:372:17 Cannot find a parameter with this name: requiresSystemPermission
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:391:17 Cannot find a parameter with this name: requiresSystemPermission
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:409:17 Cannot find a parameter with this name: requiresSystemPermission
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:445:21 Cannot find a parameter with this name: requiresSystemPermission
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/BatteryOptimizationService.kt:470:17 Cannot find a parameter with this name: requiresSystemPermission
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/ConnectionQueueService.kt:334:38 Unresolved reference: MainActivity
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/ConnectionQueueService.kt:384:38 Unresolved reference: MainActivity
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/ConnectionQueueService.kt:430:38 Unresolved reference: MainActivity
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/ConnectionQueueService.kt:459:38 Unresolved reference: MainActivity
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:7:42 Unresolved reference: PCConnection
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:29:55 Unresolved reference: PCConnection
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:55:38 Unresolved reference: PCConnection
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:67:34 Unresolved reference: PCConnection
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:74:48 Unresolved reference: getClientCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:77:50 Unresolved reference: getPrivateKey
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:81:46 Unresolved reference: getCaCertificate
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:274:48 Unresolved reference: copy
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:279:32 Unresolved reference: lastHeartbeat
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/services/WebSocketManager.kt:285:28 Unresolved reference: connectionId
+e: file:///D:/Code/pc-control/android/app/src/main/java/com/pccontrol/voice/workers/DatabaseCleanupWorker.kt:23:40 Unresolved reference: getInstance

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.ByteString
 import org.json.JSONObject
 import java.io.IOException
 import java.security.KeyStore
@@ -13,6 +14,7 @@ import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
+import kotlin.math.pow
 
 /**
  * WebSocket client wrapper for secure communication with PC backend.
@@ -254,7 +256,7 @@ class WebSocketClient private constructor(
                 }
             }
 
-            override fun onMessage(webSocket: WebSocket, bytes: okhttp3.ByteString) {
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 // Handle binary messages if needed
                 CoroutineScope(Dispatchers.IO).launch {
                     _messages.emit(bytes.hex())
@@ -290,7 +292,7 @@ class WebSocketClient private constructor(
             try {
                 // Calculate exponential backoff delay: 1s, 2s, 4s, 8s, 16s (max 30s)
                 val baseDelay = INITIAL_RECONNECT_DELAY_MS
-                val exponentialDelay = (baseDelay * kotlin.math.pow(EXPONENTIAL_BACKOFF_MULTIPLIER, reconnectAttempts.toDouble())).toLong()
+                val exponentialDelay = (baseDelay * EXPONENTIAL_BACKOFF_MULTIPLIER.pow(reconnectAttempts)).toLong()
                 val finalDelay = minOf(exponentialDelay, MAX_RECONNECT_DELAY_MS)
 
                 _connectionState.value = ConnectionState.ERROR // Show error state during retry

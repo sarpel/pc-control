@@ -1,10 +1,11 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp") version "1.9.20-1.0.14"
     id("dagger.hilt.android.plugin")
     id("kotlin-parcelize")
     id("io.gitlab.arturbosch.detekt")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
 }
 
 android {
@@ -43,12 +44,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 
     buildFeatures {
@@ -83,29 +84,46 @@ dependencies {
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    // Room
+    // Room (using kapt instead of annotationProcessor)
     implementation("androidx.room:room-runtime:2.5.0")
     implementation("androidx.room:room-ktx:2.5.0")
-    kapt("androidx.room:room-compiler:2.5.0")
+    ksp("androidx.room:room-compiler:2.5.0")
 
-    // Hilt
+    // Hilt (restored)
     implementation("com.google.dagger:hilt-android:2.47")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
-    kapt("com.google.dagger:hilt-compiler:2.47")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    ksp("com.google.dagger:hilt-compiler:2.47")
 
     // Network
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okio:okio:3.6.0")
     implementation("org.java-websocket:Java-WebSocket:1.5.4")
 
     // JSON
     implementation("org.json:json:20231013")
+    
+    // Kotlin Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Fragment KTX
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    // Lifecycle
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
@@ -119,6 +137,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.6")
+    androidTestImplementation("androidx.test:rules:1.5.0")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -128,10 +147,8 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.0")
 }
 
-// Allow references to generated code
-kapt {
-    correctErrorTypes = true
-}
+// KSP configuration (no additional config needed)
+// KAPT configuration removed as we now use KSP
 
 detekt {
     toolVersion = "1.23.0"

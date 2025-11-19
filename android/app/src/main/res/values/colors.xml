@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light Theme Colors -->
+    <color name="md_theme_light_primary">#006D3D</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#8FF7B5</color>
+    <color name="md_theme_light_onPrimaryContainer">#004226</color>
+    <color name="md_theme_light_secondary">#526350</color>
+    <color name="md_theme_light_onSecondary">#FFFFFF</color>
+    <color name="md_theme_light_secondaryContainer">#D6E8D0</color>
+    <color name="md_theme_light_onSecondaryContainer">#111F10</color>
+    <color name="md_theme_light_tertiary">#38666A</color>
+    <color name="md_theme_light_onTertiary">#FFFFFF</color>
+    <color name="md_theme_light_tertiaryContainer">#BCECF0</color>
+    <color name="md_theme_light_onTertiaryContainer">#00202B</color>
+    <color name="md_theme_light_error">#BA1A1A</color>
+    <color name="md_theme_light_errorContainer">#FFDAD6</color>
+    <color name="md_theme_light_onError">#FFFFFF</color>
+    <color name="md_theme_light_onErrorContainer">#410002</color>
+    <color name="md_theme_light_background">#FBFDF8</color>
+    <color name="md_theme_light_onBackground">#1A1C1A</color>
+    <color name="md_theme_light_surface">#FBFDF8</color>
+    <color name="md_theme_light_onSurface">#1A1C1A</color>
+    <color name="md_theme_light_surfaceVariant">#DDE5DA</color>
+    <color name="md_theme_light_onSurfaceVariant">#424941</color>
+    <color name="md_theme_light_outline">#72796F</color>
+    <color name="md_theme_light_inverseOnSurface">#F1F1EC</color>
+    <color name="md_theme_light_inverseSurface">#2F312E</color>
+    <color name="md_theme_light_inversePrimary">#6EE09A</color>
+
+    <!-- Additional App Colors -->
+    <color name="voice_primary">#2196F3</color>
+    <color name="voice_accent">#4CAF50</color>
+    <color name="voice_warning">#FF9800</color>
+    <color name="voice_error">#F44336</color>
+    <color name="voice_background">#FAFAFA</color>
+    <color name="voice_surface">#FFFFFF</color>
+    <color name="voice_text_primary">#212121</color>
+    <color name="voice_text_secondary">#757575</color>
+</resources>

@@ -37,4 +37,7 @@ interface CommandHistoryDao {
 
     @Query("DELETE FROM command_history")
     suspend fun deleteAllCommands()
+
+    @Query("DELETE FROM command_history WHERE timestamp < :timestamp")
+    suspend fun deleteOlderThan(timestamp: Long)
 }

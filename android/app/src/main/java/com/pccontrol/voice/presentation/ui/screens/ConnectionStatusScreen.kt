@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.Icons.Outlined
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +43,7 @@ fun ConnectionStatusScreen(
                     }
                 }
             )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -158,7 +161,7 @@ fun ConnectionStatusScreen(
                             onClick = viewModel::disconnect,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Disconnect, contentDescription = null)
+                            Icon(Icons.Default.Close, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Bağlantıyı Kes")
                         }
@@ -168,7 +171,7 @@ fun ConnectionStatusScreen(
                         onClick = viewModel::testConnection,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.NetworkCheck, contentDescription = null)
+                        Icon(Icons.Default.Settings, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Bağlantıyı Test Et")
                     }
@@ -180,7 +183,7 @@ fun ConnectionStatusScreen(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null)
+                        Icon(Icons.Default.Delete, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Tüm Cihazları Temizle")
                     }
@@ -287,7 +290,7 @@ private fun ConnectionStatusCard(
                 )
             }
 
-            if (lastConnected != null) {
+            if (lastConnected != null && lastConnected > 0) {
                 Text(
                     text = "Son bağlantı: ${formatTimestamp(lastConnected)}",
                     style = MaterialTheme.typography.bodySmall,

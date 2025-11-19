@@ -8,6 +8,8 @@ import com.pccontrol.voice.network.WebSocketClient
 import com.pccontrol.voice.security.KeyStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -67,7 +69,7 @@ class PairingRepository(
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val response = json.decodeFromString<PairingInitiateResponse>(responseBody)
-                    Log.i(TAG, "Pairing initiated: ${response.pairingId}")
+                    Log.i(TAG, "Pairing initiated: ${response.pairing_id}")
                     Result.success(response)
                 } else {
                     val errorBody = connection.errorStream?.bufferedReader()?.readText()
@@ -120,14 +122,19 @@ class PairingRepository(
                     // Store certificates securely
                     val stored = storeCertificatesSecurely(
                         deviceId = deviceId,
-                        caCertificate = response.caCertificate,
-                        clientCertificate = response.clientCertificate,
-                        clientPrivateKey = response.clientPrivateKey
+                        caCertificate = response.ca_certificate,
+                        clientCertificate = response.client_certificate,
+                        clientPrivateKey = response.client_private_key
                     )
 
                     if (stored) {
-                        // Store auth token
-                        val tokenStored = keyStoreManager.storeAuthToken(deviceId, response.authToken)
+                        // Store auth token (encrypt + persist)
+                        val encryptedToken = keyStoreManager.encryptSensitiveData(response.auth_token)
+                        val tokenStored = encryptedToken?.let { token ->
+                            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+                            prefs.edit().putString("auth_token_$deviceId", token).apply()
+                            true
+                        } ?: false
 
                         if (tokenStored) {
                             Log.i(TAG, "Pairing completed successfully for device: $deviceId")
@@ -235,28 +242,34 @@ class PairingRepository(
     ): Result<Boolean> {
         return try {
             // Get stored auth token
-            val authToken = keyStoreManager.getAuthToken(deviceId)
+            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+            val encryptedToken = prefs.getString("auth_token_$deviceId", null)
+            val authToken = encryptedToken?.let { keyStoreManager.decryptSensitiveData(it) }
+
             if (authToken == null) {
                 return Result.failure(Exception("Kimlik doğrulama anahtarı bulunamadı"))
             }
 
-            // Connect with mTLS and auth token
-            val connected = webSocketClient.connectSecure(
-                host = pcIpAddress,
-                port = port,
-                deviceId = deviceId,
-                authToken = authToken
-            )
+            // Connect with WebSocket
+            webSocketClient.connect()
+
+            // Wait for connection to establish
+            webSocketClient.connectionState.first { it == com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED }
+
+            // Check if connected
+            val connected = webSocketClient.connectionState.value == 
+                com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED
 
             if (connected) {
                 // Store connection info
                 val connection = PCConnection(
-                    connectionId = "conn_${System.currentTimeMillis()}",
+                    connectionId = java.util.UUID.randomUUID(),
                     pcIpAddress = pcIpAddress,
+                    pcMacAddress = "unknown", // Would be fetched from status
                     pcName = "PC", // Would be fetched from status
-                    connectionStatus = "connected",
-                    authenticationState = "authenticated",
-                    establishedAt = System.currentTimeMillis()
+                    status = com.pccontrol.voice.data.models.ConnectionStatus.CONNECTED,
+                    authenticationToken = authToken,
+                    lastConnectedAt = System.currentTimeMillis()
                 )
 
                 storeConnectionInfo(connection)
@@ -276,18 +289,21 @@ class PairingRepository(
      */
     fun getStoredPairing(deviceId: String): DevicePairing? {
         return try {
-            val certificate = keyStoreManager.getCertificate("${deviceId}_cert")
-            val fingerprint = keyStoreManager.getCertificateFingerprint("${deviceId}_cert")
-            val authToken = keyStoreManager.getAuthToken(deviceId)
+            val certificate = keyStoreManager.getCertificate()
+            val fingerprint = keyStoreManager.getCertificateFingerprint()
+            val authToken = keyStoreManager.decryptSensitiveData("auth_token_$deviceId")
 
             if (certificate != null && fingerprint != null && authToken != null) {
                 DevicePairing(
+                    pairingId = java.util.UUID.randomUUID(),
                     androidDeviceId = deviceId,
-                    androidDeviceName = "Android Device", // Would be stored separately
-                    caCertificate = "stored_in_keystore",
-                    clientCertificate = "stored_in_keystore",
-                    authToken = authToken,
-                    pairingStatus = "active"
+                    androidFingerprint = fingerprint,
+                    pcFingerprint = "stored_in_keystore",
+                    pairingCode = "",
+                    status = com.pccontrol.voice.data.models.PairingStatus.COMPLETED,
+                    createdAt = System.currentTimeMillis(),
+                    expiresAt = System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000), // 1 year
+                    authenticationToken = authToken
                 )
             } else {
                 null
@@ -309,25 +325,27 @@ class PairingRepository(
     ): Boolean {
         return try {
             // Store CA certificate for validation
-            keyStoreManager.storeCertificate(
-                alias = "${deviceId}_ca",
-                certificatePEM = caCertificate
+            val caCertBytes = android.util.Base64.decode(
+                caCertificate.replace("-----BEGIN CERTIFICATE-----", "")
+                    .replace("-----END CERTIFICATE-----", "")
+                    .replace("\n", ""),
+                android.util.Base64.DEFAULT
             )
+            keyStoreManager.importCertificate(caCertBytes)
 
             // Store client certificate
-            keyStoreManager.storeCertificate(
-                alias = "${deviceId}_cert",
-                certificatePEM = clientCertificate
+            val clientCertBytes = android.util.Base64.decode(
+                clientCertificate.replace("-----BEGIN CERTIFICATE-----", "")
+                    .replace("-----END CERTIFICATE-----", "")
+                    .replace("\n", ""),
+                android.util.Base64.DEFAULT
             )
+            keyStoreManager.importCertificate(clientCertBytes)
 
-            // Store client private key
-            val stored = keyStoreManager.storeCertificate(
-                alias = "${deviceId}_key",
-                certificatePEM = caCertificate, // This would need a different method for private keys
-                privateKeyPEM = clientPrivateKey
-            )
+            // Store private key (encrypted)
+            val encryptedKey = keyStoreManager.encryptSensitiveData(clientPrivateKey)
 
-            stored
+            encryptedKey != null
         } catch (e: Exception) {
             Log.e(TAG, "Error storing certificates", e)
             false
@@ -342,7 +360,7 @@ class PairingRepository(
         try {
             val connectionJson = json.encodeToString(connection)
             val prefs = context.getSharedPreferences("pc_connections", Context.MODE_PRIVATE)
-            prefs.edit().putString(connection.connectionId, connectionJson).apply()
+            prefs.edit().putString(connection.connectionId.toString(), connectionJson).apply()
         } catch (e: Exception) {
             Log.e(TAG, "Error storing connection info", e)
         }
@@ -353,10 +371,10 @@ class PairingRepository(
      */
     private fun removeStoredData(deviceId: String) {
         try {
-            keyStoreManager.deleteCertificate("${deviceId}_ca")
-            keyStoreManager.deleteCertificate("${deviceId}_cert")
-            keyStoreManager.deleteKey("${deviceId}_key")
-            keyStoreManager.deleteKey("auth_token_$deviceId")
+            keyStoreManager.deleteRSAKey()
+            // Remove encrypted auth token from SharedPreferences
+            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+            prefs.edit().remove("auth_token_$deviceId").apply()
         } catch (e: Exception) {
             Log.e(TAG, "Error removing stored data", e)
         }
@@ -373,7 +391,7 @@ class PairingRepository(
             HttpURLConnection.HTTP_NOT_FOUND -> "Cihaz bulunamadı"
             HttpURLConnection.HTTP_CONFLICT -> "Cihaz zaten eşleştirilmiş"
             HttpURLConnection.HTTP_GONE -> "Eşleştirme süresi dolmuş"
-            HttpURLConnection.HTTP_INTERNAL_SERVER_ERROR -> "Sunucu hatası"
+            HttpURLConnection.HTTP_INTERNAL_ERROR -> "Sunucu hatası"
             else -> "Bilinmeyen hata ($responseCode)"
         }
     }

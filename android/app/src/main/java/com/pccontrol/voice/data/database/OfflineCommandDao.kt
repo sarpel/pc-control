@@ -43,4 +43,7 @@ interface OfflineCommandDao {
 
     @Query("DELETE FROM offline_commands WHERE status IN ('completed', 'failed') AND created_at < :timestamp")
     suspend fun deleteOldCommands(timestamp: Long)
+
+    @Query("DELETE FROM offline_commands WHERE status IN ('completed', 'failed') AND created_at < :timestamp")
+    suspend fun deleteCompletedOlderThan(timestamp: Long)
 }

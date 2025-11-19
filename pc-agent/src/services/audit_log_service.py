@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
 
-from src.database.connection import Database
+from database.connection import Database
 
 logger = logging.getLogger(__name__)
 
