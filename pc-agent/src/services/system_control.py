@@ -23,7 +23,7 @@ import time
 
 # Import CommandAction from command interpreter for proper integration
 try:
-    from src.services.command_interpreter import CommandAction, ActionType
+    from services.command_interpreter import CommandAction, ActionType
 except ImportError:
     # Fallback definitions if command interpreter not available
     class ActionType(Enum):

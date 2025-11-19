@@ -23,8 +23,8 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response, JSONResponse
 from starlette.types import ASGIApp
 
-from src.config.settings import get_settings
-from src.services.connection_manager import ConnectionManager
+from config.settings import get_settings
+from services.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 

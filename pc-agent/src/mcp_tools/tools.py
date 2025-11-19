@@ -440,7 +440,7 @@ class MCPToolsRouter:
     async def _handle_query_network_status(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Handle network status query command."""
         try:
-            from src.services.system_controller import SystemCommand, OperationType
+            from services.system_controller import SystemCommand, OperationType
             
             detailed = parameters.get("detailed", False)
             result = await self.system_controller.execute(SystemCommand(
@@ -459,7 +459,7 @@ class MCPToolsRouter:
     async def _handle_power_management(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Handle power management command."""
         try:
-            from src.services.system_controller import SystemCommand, OperationType
+            from services.system_controller import SystemCommand, OperationType
             
             action = parameters["action"]
             force = parameters.get("force", False)
@@ -481,7 +481,7 @@ class MCPToolsRouter:
     async def _handle_clipboard_operations(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Handle clipboard operations command."""
         try:
-            from src.services.system_controller import SystemCommand, OperationType
+            from services.system_controller import SystemCommand, OperationType
             
             operation = parameters["operation"]
             text = parameters.get("text", "")
@@ -502,7 +502,7 @@ class MCPToolsRouter:
     async def _handle_capture_screenshot(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Handle screenshot capture command."""
         try:
-            from src.services.system_controller import SystemCommand, OperationType
+            from services.system_controller import SystemCommand, OperationType
             
             area = parameters.get("area", "full")
             path = parameters.get("path", "")
@@ -523,7 +523,7 @@ class MCPToolsRouter:
     async def _handle_manage_command_history(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Handle command history management command."""
         try:
-            from src.services.system_controller import SystemCommand, OperationType
+            from services.system_controller import SystemCommand, OperationType
             
             operation = parameters["operation"]
             

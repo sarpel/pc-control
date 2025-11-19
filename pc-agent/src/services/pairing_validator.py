@@ -26,8 +26,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 import ipaddress
 
-from src.models.device_pairing import DevicePairing, PairingStatus
-from src.database.connection import Database
+from models.device_pairing import DevicePairing, PairingStatus
+from database.connection import Database
 
 logger = logging.getLogger(__name__)
 

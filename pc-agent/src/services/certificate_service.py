@@ -22,7 +22,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from src.config.settings import get_settings
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
