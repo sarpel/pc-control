@@ -345,11 +345,7 @@ class VoiceCommandRepository private constructor(
      */
     suspend fun clearAllCommands() {
         withContext(Dispatchers.IO) {
-            // Delete all commands
-            val allCommands = dao.getRecentCommands().first()
-            allCommands.forEach { entity ->
-                dao.deleteExpiredCommands(Long.MAX_VALUE) // Delete all by using max timestamp
-            }
+            dao.deleteExpiredCommands(System.currentTimeMillis() + 1000) // All commands
             _currentCommand.value = null
         }
     }

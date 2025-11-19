@@ -3,8 +3,8 @@ package com.pccontrol.voice.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pccontrol.voice.audio.AudioProcessingService
-// import com.pccontrol.voice.services.WebSocketManager  // TODO: Fix Hilt injection
 import com.pccontrol.voice.data.models.VoiceCommand
+import com.pccontrol.voice.services.WebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,29 +17,26 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class VoiceCommandViewModel @Inject constructor(
-    private val audioProcessingService: AudioProcessingService
-    // TODO: Fix WebSocketManager Hilt injection
-    // private val webSocketManager: WebSocketManager
+    private val audioProcessingService: AudioProcessingService,
+    private val webSocketManager: WebSocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VoiceCommandUiState())
     val uiState: StateFlow<VoiceCommandUiState> = _uiState.asStateFlow()
 
-    fun initialize() {
+    init {
+        initialize()
+    }
+
+    private fun initialize() {
         viewModelScope.launch {
-            // Initialize services
             audioProcessingService.initialize()
-
-            // Collect connection status
-            // webSocketManager.isConnected.collect { isConnected ->
-            //     _uiState.value = _uiState.value.copy(
-            //         isConnected = isConnected,
-            //         connectedPcName = if (isConnected) "PC" else null
-            //     )
-            // }
-
-            // Collect audio processing results
-            // This would be implemented based on the actual AudioProcessingService
+            webSocketManager.connectionStatus.collect { status ->
+                _uiState.value = _uiState.value.copy(
+                    isConnected = status.isConnected,
+                    connectedPcName = if (status.isConnected) status.pcName else null
+                )
+            }
         }
     }
 
@@ -52,42 +49,14 @@ class VoiceCommandViewModel @Inject constructor(
                     isError = false
                 )
 
-                val result = audioProcessingService.startVoiceCommandProcessing()
+                val result: Result<AudioProcessingService.VoiceCommandResult> = audioProcessingService.startVoiceCommandProcessing()
 
-                result.fold(
-                    onSuccess = { voiceCommand ->
-                        if (voiceCommand.isValid) {
-                            _uiState.value = _uiState.value.copy(
-                                statusMessage = voiceCommand.transcription.orEmpty(),
-                                isError = false
-                            )
-
-                            // Send command to PC
-                            sendCommandToPC(voiceCommand)
-
-                            // Add to recent commands
-                            val newCommand = RecentCommand(
-                                transcription = voiceCommand.transcription.orEmpty(),
-                                success = true,
-                                timestamp = System.currentTimeMillis()
-                            )
-                            _uiState.value = _uiState.value.copy(
-                                recentCommands = listOf(newCommand) + _uiState.value.recentCommands.take(4)
-                            )
-                        } else {
-                            _uiState.value = _uiState.value.copy(
-                                statusMessage = "Komut gönderilemedi",
-                                isError = true
-                            )
-                        }
-                    },
-                    onFailure = { error ->
-                        _uiState.value = _uiState.value.copy(
-                            statusMessage = "İşlem hatası: ${error.message}",
-                            isError = true
-                        )
-                    }
-                )
+                result.onSuccess { voiceCommand ->
+                    _uiState.value = _uiState.value.copy(statusMessage = voiceCommand.transcription)
+                    sendCommandToPC(voiceCommand)
+                }.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(statusMessage = "Error: ${error.message}", isError = true)
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     statusMessage = "Hata: ${e.message}",
@@ -118,43 +87,22 @@ class VoiceCommandViewModel @Inject constructor(
 
     private fun sendCommandToPC(voiceCommand: AudioProcessingService.VoiceCommandResult) {
         viewModelScope.launch {
-            try {
-                // TODO: Fix WebSocketManager Hilt injection
-                /*
-                val success = webSocketManager.sendVoiceCommand(
-                    transcription = voiceCommand.transcription,
-                    confidence = voiceCommand.confidence
-                )
-                */
-                val success = true // Temporary placeholder
+            val command = VoiceCommand(
+                transcription = voiceCommand.transcription,
+                timestamp = System.currentTimeMillis()
+            )
+            val success = webSocketManager.sendCommand(command)
 
-                if (success) {
-                    _uiState.value = _uiState.value.copy(
-                        statusMessage = "Komut gönderildi",
-                        isError = false
-                    )
-
-                    // Add to recent commands
-                    val newCommand = RecentCommand(
-                        transcription = voiceCommand.transcription.orEmpty(),
-                        success = true,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        recentCommands = listOf(newCommand) + _uiState.value.recentCommands.take(4)
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        statusMessage = "Komut gönderilemedi",
-                        isError = true
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    statusMessage = "Bağlantı hatası: ${e.message}",
-                    isError = true
-                )
-            }
+            val newCommand = RecentCommand(
+                transcription = voiceCommand.transcription,
+                success = success,
+                timestamp = System.currentTimeMillis()
+            )
+            _uiState.value = _uiState.value.copy(
+                statusMessage = if (success) "Command sent" else "Failed to send command",
+                isError = !success,
+                recentCommands = listOf(newCommand) + _uiState.value.recentCommands.take(4)
+            )
         }
     }
 }
@@ -171,13 +119,4 @@ data class VoiceCommandUiState(
     val statusMessage: String = "",
     val isError: Boolean = false,
     val recentCommands: List<RecentCommand> = emptyList()
-)
-
-/**
- * Recent command for history display.
- */
-data class RecentCommand(
-    val transcription: String,
-    val success: Boolean,
-    val timestamp: Long
 )

@@ -6,10 +6,11 @@ import com.pccontrol.voice.data.models.DevicePairing
 import com.pccontrol.voice.data.models.PCConnection
 import com.pccontrol.voice.network.WebSocketClient
 import com.pccontrol.voice.security.KeyStoreManager
+import com.pccontrol.voice.network.WebSocketClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -27,6 +28,8 @@ import java.net.URL
  * - Auth token management
  * - Connection establishment
  */
+typealias PairingResult<T> = Result<T>
+
 class PairingRepository(
     private val context: Context,
     private val webSocketClient: WebSocketClient,
@@ -34,57 +37,27 @@ class PairingRepository(
 ) {
     companion object {
         private const val TAG = "PairingRepository"
-        private const val PAIRING_ENDPOINT = "https://pc-ip:8443/api/pairing"
+        private const val PAIRING_ENDPOINT = "https://{pcIpAddress}:8443/api/pairing"
+        private const val SECURE_PREFS_NAME = "secure_storage"
+        private const val AUTH_TOKEN_KEY_PREFIX = "auth_token_"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /**
-     * Initiate pairing process with PC.
-     */
     suspend fun initiatePairing(
         deviceName: String,
         deviceId: String,
         pcIpAddress: String
-    ): Result<PairingInitiateResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/initiate")
-                val request = PairingInitiateRequest(deviceName, deviceId)
-                val requestBody = json.encodeToString(request)
-
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
-
-                    // Write request body
-                    outputStream.use { it.write(requestBody.toByteArray()) }
-                }
-
-                val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = json.decodeFromString<PairingInitiateResponse>(responseBody)
-                    Log.i(TAG, "Pairing initiated: ${response.pairing_id}")
-                    Result.success(response)
-                } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
-                    val errorMessage = parseErrorMessage(responseCode, errorBody)
-                    Log.e(TAG, "Pairing initiation failed: $errorMessage")
-                    Result.failure(Exception(errorMessage))
-                }
-
-            } catch (e: IOException) {
-                Log.e(TAG, "Network error during pairing initiation", e)
-                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin.", e))
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error during pairing initiation", e)
-                Result.failure(Exception("Beklenmedik hata: ${e.message}", e))
-            }
+    ): PairingResult<PairingInitiateResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(PAIRING_ENDPOINT.replace("{pcIpAddress}", pcIpAddress) + "/initiate")
+            val request = PairingInitiateRequest(deviceName, deviceId)
+            val response = sendJsonRequest<PairingInitiateRequest, PairingInitiateResponse>(url, "POST", request)
+            Log.i(TAG, "Pairing initiated: ${response.pairingId}")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Pairing initiation failed", e)
+            Result.failure(e)
         }
     }
 
@@ -96,287 +69,185 @@ class PairingRepository(
         pairingCode: String,
         deviceId: String,
         pcIpAddress: String
-    ): Result<PairingVerifyResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/verify")
-                val request = PairingVerifyRequest(pairingId, pairingCode, deviceId)
-                val requestBody = json.encodeToString(request)
+    ): PairingResult<PairingVerifyResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(PAIRING_ENDPOINT.replace("{pcIpAddress}", pcIpAddress) + "/verify")
+            val request = PairingVerifyRequest(pairingId, pairingCode, deviceId)
+            val response = sendJsonRequest<PairingVerifyRequest, PairingVerifyResponse>(url, "POST", request)
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
+            storeCertificatesSecurely(
+                caCertificate = response.caCertificate,
+                clientCertificate = response.clientCertificate,
+                clientPrivateKey = response.clientPrivateKey
+            )
 
-                    outputStream.use { it.write(requestBody.toByteArray()) }
-                }
+            storeAuthToken(deviceId, response.authToken)
 
-                val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = json.decodeFromString<PairingVerifyResponse>(responseBody)
-
-                    // Store certificates securely
-                    val stored = storeCertificatesSecurely(
-                        deviceId = deviceId,
-                        caCertificate = response.ca_certificate,
-                        clientCertificate = response.client_certificate,
-                        clientPrivateKey = response.client_private_key
-                    )
-
-                    if (stored) {
-                        // Store auth token (encrypt + persist)
-                        val encryptedToken = keyStoreManager.encryptSensitiveData(response.auth_token)
-                        val tokenStored = encryptedToken?.let { token ->
-                            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
-                            prefs.edit().putString("auth_token_$deviceId", token).apply()
-                            true
-                        } ?: false
-
-                        if (tokenStored) {
-                            Log.i(TAG, "Pairing completed successfully for device: $deviceId")
-                            Result.success(response)
-                        } else {
-                            Result.failure(Exception("Kimlik doğrulama anahtarı saklanamadı"))
-                        }
-                    } else {
-                        Result.failure(Exception("Sertifikalar güvenli şekilde saklanamadı"))
-                    }
-                } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
-                    val errorMessage = parseErrorMessage(responseCode, errorBody)
-                    Log.e(TAG, "Pairing verification failed: $errorMessage")
-                    Result.failure(Exception(errorMessage))
-                }
-
-            } catch (e: IOException) {
-                Log.e(TAG, "Network error during pairing verification", e)
-                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin.", e))
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error during pairing verification", e)
-                Result.failure(Exception("Beklenmedik hata: ${e.message}", e))
-            }
+            Log.i(TAG, "Pairing completed successfully for device: $deviceId")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Pairing verification failed", e)
+            Result.failure(e)
         }
     }
 
-    /**
-     * Get pairing status from PC.
-     */
     suspend fun getPairingStatus(
         deviceId: String,
         pcIpAddress: String
-    ): Result<PairingStatusResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status?device_id=$deviceId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/json")
-                }
-
-                val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = json.decodeFromString<PairingStatusResponse>(responseBody)
-                    Result.success(response)
-                } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
-                    val errorMessage = parseErrorMessage(responseCode, errorBody)
-                    Result.failure(Exception(errorMessage))
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error getting pairing status", e)
-                Result.failure(Exception("Durum bilgisi alınamadı", e))
-            }
+    ): PairingResult<PairingStatusResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(PAIRING_ENDPOINT.replace("{pcIpAddress}", pcIpAddress) + "/status?device_id=$deviceId")
+            val response = sendJsonRequest<Unit, PairingStatusResponse>(url, "GET")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting pairing status", e)
+            Result.failure(Exception("Durum bilgisi alınamadı", e))
         }
     }
 
-    /**
-     * Revoke device pairing.
-     */
     suspend fun revokePairing(
         deviceId: String,
         pcIpAddress: String
-    ): Result<Boolean> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/$deviceId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "DELETE"
-                    setRequestProperty("Accept", "application/json")
-                }
-
-                val responseCode = connection.responseCode
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    // Remove stored certificates and tokens
-                    removeStoredData(deviceId)
-                    Result.success(true)
-                } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
-                    val errorMessage = parseErrorMessage(responseCode, errorBody)
-                    Result.failure(Exception(errorMessage))
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error revoking pairing", e)
-                Result.failure(Exception("Eşleştirme iptal edilemedi", e))
-            }
+    ): PairingResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(PAIRING_ENDPOINT.replace("{pcIpAddress}", pcIpAddress) + "/$deviceId")
+            sendJsonRequest<Unit, Unit>(url, "DELETE")
+            removeStoredData(deviceId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error revoking pairing", e)
+            Result.failure(Exception("Eşleştirme iptal edilemedi", e))
         }
     }
 
-    /**
-     * Establish secure WebSocket connection after successful pairing.
-     */
     suspend fun establishSecureConnection(
         deviceId: String,
         pcIpAddress: String,
         port: Int = 8443
-    ): Result<Boolean> {
+    ): PairingResult<PCConnection> {
+        val authToken = getAuthToken(deviceId)
+            ?: return Result.failure(Exception("Authentication token not found."))
+
         return try {
-            // Get stored auth token
-            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
-            val encryptedToken = prefs.getString("auth_token_$deviceId", null)
-            val authToken = encryptedToken?.let { keyStoreManager.decryptSensitiveData(it) }
+            webSocketClient.connectSecure(pcIpAddress, port, authToken)
 
-            if (authToken == null) {
-                return Result.failure(Exception("Kimlik doğrulama anahtarı bulunamadı"))
+            val connectionResult = withTimeoutOrNull(10000) { // 10-second timeout
+                webSocketClient.connectionState.first { it == WebSocketClient.ConnectionState.CONNECTED }
             }
 
-            // Connect with WebSocket
-            webSocketClient.connect()
-
-            // Wait for connection to establish
-            webSocketClient.connectionState.first { it == com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED }
-
-            // Check if connected
-            val connected = webSocketClient.connectionState.value == 
-                com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED
-
-            if (connected) {
-                // Store connection info
-                val connection = PCConnection(
-                    connectionId = java.util.UUID.randomUUID(),
-                    pcIpAddress = pcIpAddress,
-                    pcMacAddress = "unknown", // Would be fetched from status
-                    pcName = "PC", // Would be fetched from status
-                    status = com.pccontrol.voice.data.models.ConnectionStatus.CONNECTED,
-                    authenticationToken = authToken,
-                    lastConnectedAt = System.currentTimeMillis()
-                )
-
-                storeConnectionInfo(connection)
-                Result.success(true)
-            } else {
-                Result.failure(Exception("WebSocket bağlantısı kurulamadı"))
+            if (connectionResult == null) {
+                return Result.failure(Exception("Connection timed out."))
             }
 
+            val connection = PCConnection(
+                connectionId = java.util.UUID.randomUUID().toString(),
+                pcIpAddress = pcIpAddress,
+                pcName = "Connected PC",
+                status = "CONNECTED",
+                authenticationState = "AUTHENTICATED",
+                establishedAt = System.currentTimeMillis()
+            )
+            Result.success(connection)
         } catch (e: Exception) {
             Log.e(TAG, "Error establishing secure connection", e)
-            Result.failure(Exception("Güvenli bağlantı kurulamadı", e))
+            Result.failure(e)
         }
     }
 
     /**
      * Get stored device pairing information.
      */
-    fun getStoredPairing(deviceId: String): DevicePairing? {
-        return try {
-            val certificate = keyStoreManager.getCertificate()
-            val fingerprint = keyStoreManager.getCertificateFingerprint()
-            val authToken = keyStoreManager.decryptSensitiveData("auth_token_$deviceId")
-
-            if (certificate != null && fingerprint != null && authToken != null) {
-                DevicePairing(
-                    pairingId = java.util.UUID.randomUUID(),
-                    androidDeviceId = deviceId,
-                    androidFingerprint = fingerprint,
-                    pcFingerprint = "stored_in_keystore",
-                    pairingCode = "",
-                    status = com.pccontrol.voice.data.models.PairingStatus.COMPLETED,
-                    createdAt = System.currentTimeMillis(),
-                    expiresAt = System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000), // 1 year
-                    authenticationToken = authToken
-                )
-            } else {
-                null
-            }
+    suspend fun getAuthToken(deviceId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val prefs = context.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE)
+            val encryptedToken = prefs.getString("$AUTH_TOKEN_KEY_PREFIX$deviceId", null)
+            encryptedToken?.let { keyStoreManager.decryptSensitiveData(it) }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting stored pairing", e)
+            Log.e(TAG, "Failed to get auth token", e)
             null
         }
     }
 
-    /**
-     * Store certificates securely in Android KeyStore.
-     */
-    private suspend fun storeCertificatesSecurely(
-        deviceId: String,
+    private suspend fun storeAuthToken(deviceId: String, token: String) = withContext(Dispatchers.IO) {
+        try {
+            val encryptedToken = keyStoreManager.encryptSensitiveData(token)
+            if (encryptedToken != null) {
+                val prefs = context.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().putString("$AUTH_TOKEN_KEY_PREFIX$deviceId", encryptedToken).apply()
+            } else {
+                throw Exception("Failed to encrypt auth token")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to store auth token", e)
+            throw e
+        }
+    }
+
+    private fun storeCertificatesSecurely(
         caCertificate: String,
         clientCertificate: String,
         clientPrivateKey: String
-    ): Boolean {
-        return try {
-            // Store CA certificate for validation
-            val caCertBytes = android.util.Base64.decode(
-                caCertificate.replace("-----BEGIN CERTIFICATE-----", "")
-                    .replace("-----END CERTIFICATE-----", "")
-                    .replace("\n", ""),
-                android.util.Base64.DEFAULT
-            )
-            keyStoreManager.importCertificate(caCertBytes)
-
-            // Store client certificate
-            val clientCertBytes = android.util.Base64.decode(
-                clientCertificate.replace("-----BEGIN CERTIFICATE-----", "")
-                    .replace("-----END CERTIFICATE-----", "")
-                    .replace("\n", ""),
-                android.util.Base64.DEFAULT
-            )
-            keyStoreManager.importCertificate(clientCertBytes)
-
-            // Store private key (encrypted)
-            val encryptedKey = keyStoreManager.encryptSensitiveData(clientPrivateKey)
-
-            encryptedKey != null
+    ) {
+        try {
+            keyStoreManager.storeCertificate("CA", caCertificate)
+            keyStoreManager.storeCertificate("CLIENT", clientCertificate)
+            keyStoreManager.storeKey("CLIENT", clientPrivateKey)
         } catch (e: Exception) {
             Log.e(TAG, "Error storing certificates", e)
-            false
+            throw Exception("Failed to store certificates securely.", e)
         }
     }
 
     /**
      * Store connection information for later use.
      */
-    private fun storeConnectionInfo(connection: PCConnection) {
-        // Store in SharedPreferences or database
+    private fun removeStoredData(deviceId: String) {
         try {
-            val connectionJson = json.encodeToString(connection)
-            val prefs = context.getSharedPreferences("pc_connections", Context.MODE_PRIVATE)
-            prefs.edit().putString(connection.connectionId.toString(), connectionJson).apply()
+            keyStoreManager.deleteCertificate("CA")
+            keyStoreManager.deleteCertificate("CLIENT")
+            keyStoreManager.deleteKey("CLIENT")
+
+            val prefs = context.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().remove("$AUTH_TOKEN_KEY_PREFIX$deviceId").apply()
         } catch (e: Exception) {
-            Log.e(TAG, "Error storing connection info", e)
+            Log.e(TAG, "Error removing stored data", e)
         }
     }
 
-    /**
-     * Remove stored pairing data.
-     */
-    private fun removeStoredData(deviceId: String) {
-        try {
-            keyStoreManager.deleteRSAKey()
-            // Remove encrypted auth token from SharedPreferences
-            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
-            prefs.edit().remove("auth_token_$deviceId").apply()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error removing stored data", e)
+    @Throws(IOException::class, Exception::class)
+    private inline fun <reified T, reified R> sendJsonRequest(
+        url: URL,
+        method: String,
+        requestData: T? = null
+    ): R {
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("Accept", "application/json")
+            if (requestData != null) {
+                doOutput = true
+                outputStream.use { os ->
+                    os.write(json.encodeToString(requestData).toByteArray())
+                }
+            }
+        }
+
+        val responseCode = connection.responseCode
+        val responseBody = if (responseCode in 200..299) {
+            connection.inputStream.bufferedReader().readText()
+        } else {
+            connection.errorStream?.bufferedReader()?.readText()
+        }
+
+        if (responseCode in 200..299) {
+            if (R::class == Unit::class) {
+                @Suppress("UNCHECKED_CAST")
+                return Unit as R
+            }
+            return json.decodeFromString(responseBody ?: "")
+        } else {
+            val errorMessage = parseErrorMessage(responseCode, responseBody)
+            throw IOException(errorMessage)
         }
     }
 
@@ -384,54 +255,53 @@ class PairingRepository(
      * Parse error message from API response.
      */
     private fun parseErrorMessage(responseCode: Int, errorBody: String?): String {
-        return when (responseCode) {
-            HttpURLConnection.HTTP_BAD_REQUEST -> "Geçersiz istek"
-            HttpURLConnection.HTTP_UNAUTHORIZED -> "Geçersiz eşleştirme kodu"
-            HttpURLConnection.HTTP_FORBIDDEN -> "Maksimum cihaz sayısına ulaşıldı"
-            HttpURLConnection.HTTP_NOT_FOUND -> "Cihaz bulunamadı"
-            HttpURLConnection.HTTP_CONFLICT -> "Cihaz zaten eşleştirilmiş"
-            HttpURLConnection.HTTP_GONE -> "Eşleştirme süresi dolmuş"
-            HttpURLConnection.HTTP_INTERNAL_ERROR -> "Sunucu hatası"
-            else -> "Bilinmeyen hata ($responseCode)"
+        return errorBody ?: when (responseCode) {
+            HttpURLConnection.HTTP_BAD_REQUEST -> "Invalid request"
+            HttpURLConnection.HTTP_UNAUTHORIZED -> "Invalid pairing code"
+            HttpURLConnection.HTTP_FORBIDDEN -> "Maximum device limit reached"
+            HttpURLConnection.HTTP_NOT_FOUND -> "Device not found"
+            HttpURLConnection.HTTP_CONFLICT -> "Device already paired"
+            HttpURLConnection.HTTP_GONE -> "Pairing expired"
+            HttpURLConnection.HTTP_INTERNAL_ERROR -> "Server error"
+            else -> "Unknown error ($responseCode)"
         }
     }
 }
 
-// Data classes for API requests/responses
 @kotlinx.serialization.Serializable
 data class PairingInitiateRequest(
-    val device_name: String,
-    val device_id: String
+    val deviceName: String,
+    val deviceId: String
 )
 
 @kotlinx.serialization.Serializable
 data class PairingInitiateResponse(
-    val pairing_id: String,
-    val pairing_code: String,
-    val expires_in_seconds: Int
+    val pairingId: String,
+    val pairingCode: String,
+    val expiresInSeconds: Int
 )
 
 @kotlinx.serialization.Serializable
 data class PairingVerifyRequest(
-    val pairing_id: String,
-    val pairing_code: String,
-    val device_id: String
+    val pairingId: String,
+    val pairingCode: String,
+    val deviceId: String
 )
 
 @kotlinx.serialization.Serializable
 data class PairingVerifyResponse(
-    val ca_certificate: String,
-    val client_certificate: String,
-    val client_private_key: String,
-    val auth_token: String,
-    val token_expires_at: String
+    val caCertificate: String,
+    val clientCertificate: String,
+    val clientPrivateKey: String,
+    val authToken: String,
+    val tokenExpiresAt: String
 )
 
 @kotlinx.serialization.Serializable
 data class PairingStatusResponse(
     val status: String,
-    val device_name: String,
-    val device_id: String,
-    val paired_at: String?,
-    val token_expires_at: String?
+    val deviceName: String,
+    val deviceId: String,
+    val pairedAt: String?,
+    val tokenExpiresAt: String?
 )

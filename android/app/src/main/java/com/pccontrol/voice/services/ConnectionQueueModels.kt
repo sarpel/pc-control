@@ -1,5 +1,5 @@
 package com.pccontrol.voice.services
-
+import java.util.UUID
 /**
  * Data models for connection queue management
  */
@@ -31,5 +31,5 @@ data class QueueStatus(
  * Generate a unique connection ID
  */
 fun generateConnectionId(): String {
-    return "conn_${System.currentTimeMillis()}_${(Math.random() * 10000).toInt()}"
+    return UUID.randomUUID().toString()
 }

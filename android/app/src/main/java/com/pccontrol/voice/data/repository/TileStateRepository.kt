@@ -3,10 +3,12 @@ package com.pccontrol.voice.data.repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 
 // Extension property for DataStore
@@ -37,7 +39,7 @@ private val Context.tileStateDataStore: DataStore<Preferences> by preferencesDat
  *
  * Task: T121 [US1] Add Quick Settings tile state persistence in android/app/src/main/java/com/pccontrol/voice/data/repository/TileStateRepository.kt
  */
-class TileStateRepository private constructor(
+class TileStateRepository(
     private val context: Context
 ) {
     private val dataStore: DataStore<Preferences> = context.tileStateDataStore
@@ -79,10 +81,12 @@ class TileStateRepository private constructor(
     }
 
     // State flows
-    val tileState: Flow<TileState> = dataStore.data.map { preferences ->
-        val stateValue = preferences[KEY_TILE_STATE] ?: TileState.INACTIVE.value
-        TileState.fromValue(stateValue)
-    }
+    val tileState: Flow<TileState>
+        get() = dataStore.data.map { preferences ->
+            TileState.fromValue(preferences[KEY_TILE_STATE] ?: TileState.INACTIVE.value)
+        }
+
+    val lastKnownPcIpAddress: Flow<String?> = dataStore.data.map { it[KEY_PC_IP_ADDRESS] }
 
     val lastStateUpdate: Flow<Instant> = dataStore.data.map { preferences ->
         val timestamp = preferences[KEY_LAST_STATE_UPDATE] ?: System.currentTimeMillis()
@@ -333,12 +337,6 @@ class TileStateRepository private constructor(
         val uptimeHours: Float
     )
 
-    /**
-     * Factory for creating TileStateRepository instances
-     */
-    class Factory(private val context: Context) {
-        fun create(): TileStateRepository = TileStateRepository(context)
-    }
 }
 
 /**
@@ -370,15 +368,13 @@ class TileStateManager(private val repository: TileStateRepository) {
         repository.setTileState(TileStateRepository.TileState.UNAVAILABLE)
     }
 
-    suspend fun getTurkishStatusMessage(): Flow<String> {
-        return repository.tileState.map { state ->
-            when (state) {
-                TileStateRepository.TileState.ACTIVE -> "PC'ye bağlı - Ses komutu bekleniyor"
-                TileStateRepository.TileState.INACTIVE -> "Bağlı değil - Dokun bağlanmak için"
-                TileStateRepository.TileState.CONNECTING -> "Bağlanıyor..."
-                TileStateRepository.TileState.UNAVAILABLE -> "Hizmet kullanılamıyor"
-                TileStateRepository.TileState.ERROR -> "Bağlantı hatası"
-            }
+    val turkishStatusMessage: Flow<String> = repository.tileState.map { state ->
+        when (state) {
+            TileStateRepository.TileState.ACTIVE -> "PC'ye bağlı - Ses komutu bekleniyor"
+            TileStateRepository.TileState.INACTIVE -> "Bağlı değil - Dokun bağlanmak için"
+            TileStateRepository.TileState.CONNECTING -> "Bağlanıyor..."
+            TileStateRepository.TileState.UNAVAILABLE -> "Hizmet kullanılamıyor"
+            TileStateRepository.TileState.ERROR -> "Bağlantı hatası"
         }
     }
 }

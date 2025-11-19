@@ -53,7 +53,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(DatabaseCallback(context))
-                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
@@ -186,13 +185,7 @@ abstract class AppDatabase : RoomDatabase() {
      */
     object MIGRATION_3_4 : Migration(3, 4) {
         override fun migrate(database: SupportSQLiteDatabase) {
-            // Add missing columns to app_settings table
-            val currentTime = System.currentTimeMillis()
-            
-            database.execSQL("ALTER TABLE app_settings ADD COLUMN description TEXT")
             database.execSQL("ALTER TABLE app_settings ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0")
-            database.execSQL("ALTER TABLE app_settings ADD COLUMN created_at INTEGER NOT NULL DEFAULT $currentTime")
-            database.execSQL("ALTER TABLE app_settings ADD COLUMN updated_at INTEGER NOT NULL DEFAULT $currentTime")
         }
     }
 }

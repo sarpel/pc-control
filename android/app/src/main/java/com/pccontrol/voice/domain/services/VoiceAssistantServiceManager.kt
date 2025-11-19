@@ -1,5 +1,7 @@
 package com.pccontrol.voice.domain.services
 
+import com.pccontrol.voice.common.ConnectionState
+import com.pccontrol.voice.common.ServiceState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,53 +12,59 @@ import javax.inject.Singleton
  * Manager for interacting with VoiceAssistantService.
  * Acts as a bridge between UI/ViewModels and the Android Service.
  */
+interface VoiceAssistantServiceManagerInterface {
+    val connectionState: StateFlow<ConnectionState>
+    val serviceState: StateFlow<ServiceState>
+    val audioLevelFlow: StateFlow<Float>
+    fun onServiceConnected(service: VoiceAssistantService)
+    fun onServiceDisconnected()
+    suspend fun startVoiceCapture(): Boolean
+    fun stopVoiceCapture()
+    suspend fun connectToPCAgent(): Boolean
+    fun getCurrentAudioLevel(): Float
+}
+
 @Singleton
-class VoiceAssistantServiceManager @Inject constructor() {
+class VoiceAssistantServiceManager @Inject constructor() : VoiceAssistantServiceManagerInterface {
 
-    // Mirroring VoiceAssistantService states
-    private val _connectionState = MutableStateFlow(VoiceAssistantService.ConnectionState.DISCONNECTED)
-    val connectionState: StateFlow<VoiceAssistantService.ConnectionState> = _connectionState.asStateFlow()
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    override val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _serviceState = MutableStateFlow(VoiceAssistantService.ServiceState.STOPPED)
-    val serviceState: StateFlow<VoiceAssistantService.ServiceState> = _serviceState.asStateFlow()
+    private val _serviceState = MutableStateFlow(ServiceState.STOPPED)
+    override val serviceState: StateFlow<ServiceState> = _serviceState.asStateFlow()
 
     private val _audioLevelFlow = MutableStateFlow(0f)
-    val audioLevelFlow: StateFlow<Float> = _audioLevelFlow.asStateFlow()
+    override val audioLevelFlow: StateFlow<Float> = _audioLevelFlow.asStateFlow()
 
-    // Stub methods
-    suspend fun startVoiceCapture(): Boolean {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.LISTENING
-        return true
-    }
+    private val _isServiceBound = MutableStateFlow(false)
+    val isServiceBound: StateFlow<Boolean> = _isServiceBound.asStateFlow()
 
-    fun stopVoiceCapture() {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.RUNNING
-    }
+    private var voiceAssistantService: VoiceAssistantService? = null
 
-    suspend fun connectToPCAgent(): Boolean {
-        // TODO: Bind to service and call method
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTING
-        // Simulate connection
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTED
-        return true
+    override fun onServiceConnected(service: VoiceAssistantService) {
+        voiceAssistantService = service
+        _isServiceBound.value = true
+        // TODO: Collect states from the service
     }
 
-    fun getCurrentAudioLevel(): Float {
-        return _audioLevelFlow.value
+    override fun onServiceDisconnected() {
+        voiceAssistantService = null
+        _isServiceBound.value = false
     }
-    
-    // Method for Service to update state (if we go that route)
-    fun updateConnectionState(state: VoiceAssistantService.ConnectionState) {
-        _connectionState.value = state
+
+    override suspend fun startVoiceCapture(): Boolean {
+        return voiceAssistantService?.startVoiceCommandCapture() ?: false
     }
-    
-    fun updateServiceState(state: VoiceAssistantService.ServiceState) {
-        _serviceState.value = state
+
+    override fun stopVoiceCapture() {
+        voiceAssistantService?.stopVoiceCommandCapture()
     }
-    
-    fun updateAudioLevel(level: Float) {
-        _audioLevelFlow.value = level
+
+    override suspend fun connectToPCAgent(): Boolean {
+        return voiceAssistantService?.connectToPCAgent() ?: false
+    }
+
+    override fun getCurrentAudioLevel(): Float {
+        return voiceAssistantService?.getCurrentAudioLevel() ?: 0f
     }
 }

@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.pccontrol.voice.data.repository.CommandStatus
 import com.pccontrol.voice.data.repository.VoiceCommandRepository
+import com.pccontrol.voice.domain.VoiceCommandResult
+import com.pccontrol.voice.R
+import javax.inject.Inject
 
 /**
  * Voice Assistant Foreground Service
@@ -38,25 +40,14 @@ import com.pccontrol.voice.data.repository.VoiceCommandRepository
  *
  * Task: T053 [US1] Implement Android foreground service for background operation in android/app/src/main/java/com/pccontrol/voice/domain/services/VoiceAssistantService.kt
  */
-class VoiceAssistantService : Service() {
-
-    companion object {
-        private const val TAG = "VoiceAssistantService"
-        private const val NOTIFICATION_ID = 1001
-        private const val CHANNEL_ID = "voice_assistant_channel"
-        private const val ACTION_START = "com.pccontrol.voice.START"
-        private const val ACTION_STOP = "com.pccontrol.voice.STOP"
-        private const val ACTION_VOICE_COMMAND = "com.pccontrol.voice.VOICE_COMMAND"
-
-        // Battery optimization: idle timeout (5 minutes)
-        private const val IDLE_TIMEOUT_MS = 5 * 60 * 1000L
-    }
+class VoiceAssistantService @Inject constructor(
+    private val voiceCommandRepository: VoiceCommandRepository,
+    private val audioCaptureService: AudioCaptureService,
+    private val webSocketManager: WebSocketManager,
+    private val notificationManager: NotificationManagerCompat
+) : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var audioCaptureService: AudioCaptureService? = null
-    private var voiceCommandRepository: VoiceCommandRepository? = null
-    private var webSocketManager: WebSocketManager? = null
-    private var notificationManager: NotificationManagerCompat? = null
 
     // Service state tracking
     private var isRunning = false
@@ -98,15 +89,7 @@ class VoiceAssistantService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "VoiceAssistantService created")
-
-        // Initialize components
-        initializeComponents()
-
-        // Create notification channel
         createNotificationChannel()
-
-        // Initialize repository
-        voiceCommandRepository = VoiceCommandRepository.Factory(this).create()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -136,19 +119,6 @@ class VoiceAssistantService : Service() {
     }
 
     /**
-     * Initialize all service components
-     */
-    private fun initializeComponents() {
-        notificationManager = NotificationManagerCompat.from(this)
-
-        // Initialize audio capture service
-        audioCaptureService = AudioCaptureService.Factory(this).create()
-
-        // Initialize WebSocket manager
-        webSocketManager = WebSocketManager.Factory(this).create()
-    }
-
-    /**
      * Start the voice assistant service
      */
     private fun startVoiceAssistant() {
@@ -156,69 +126,40 @@ class VoiceAssistantService : Service() {
             Log.d(TAG, "Service already running")
             return
         }
-
         Log.d(TAG, "Starting voice assistant service")
         _serviceState.value = ServiceState.STARTING
-
+        startForeground(NOTIFICATION_ID, createNotification("Starting..."))
         serviceScope.launch {
             try {
-                // Start foreground service with notification
-                startForeground(NOTIFICATION_ID, createNotification())
-
-                // Initialize audio capture
-                audioCaptureService?.let { audio ->
-                    val initResult = audio.initialize()
-                    if (initResult.isFailure) {
-                        throw Exception("Failed to initialize audio capture: ${initResult.exceptionOrNull()}")
-                    }
-                }
-
-                // Connect to PC agent
+                audioCaptureService.initialize().getOrThrow()
                 connectToPCAgent()
-
                 isRunning = true
                 _serviceState.value = ServiceState.RUNNING
                 lastActivityTime = System.currentTimeMillis()
-
                 Log.d(TAG, "Voice assistant service started successfully")
-
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start voice assistant service", e)
-                _serviceState.value = ServiceState.ERROR
-                stopSelf()
+                handleServiceError("Failed to start: ${e.message}")
             }
         }
     }
 
-    /**
-     * Stop the voice assistant service
-     */
     private fun stopVoiceAssistant() {
         Log.d(TAG, "Stopping voice assistant service")
-
-        serviceScope.launch {
-            try {
-                // Stop audio capture
-                audioCaptureService?.stopRecording()
-
-                // Disconnect WebSocket
-                webSocketManager?.disconnect()
-
-                // Stop foreground service
-                stopForeground(true)
-                stopSelf()
-
-                isRunning = false
-                isConnected = false
-                isListening = false
-                _serviceState.value = ServiceState.STOPPED
-                _connectionState.value = ConnectionState.DISCONNECTED
-
-                Log.d(TAG, "Voice assistant service stopped")
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error stopping voice assistant service", e)
-            }
+        try {
+            audioCaptureService.stopRecording()
+            webSocketManager.disconnect()
+            stopForeground(true)
+            stopSelf()
+            isRunning = false
+            isConnected = false
+            _serviceState.value = ServiceState.STOPPED
+            _connectionState.value = ConnectionState.DISCONNECTED
+            Log.d(TAG, "Voice assistant service stopped")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping voice assistant service", e)
+        } finally {
+            cleanup()
         }
     }
 
@@ -226,87 +167,45 @@ class VoiceAssistantService : Service() {
      * Start voice command capture
      */
     private fun startVoiceCommandCapture() {
-        if (!isRunning || !isConnected) {
-            Log.w(TAG, "Cannot start voice capture - service not ready")
+        if (!isRunning || !isConnected || isListening) {
+            Log.w(TAG, "Cannot start voice capture. Running: $isRunning, Connected: $isConnected, Listening: $isListening")
             return
         }
-
-        if (isListening) {
-            Log.d(TAG, "Already listening for voice commands")
-            return
-        }
-
         Log.d(TAG, "Starting voice command capture")
         _serviceState.value = ServiceState.LISTENING
-
+        isListening = true
+        lastActivityTime = System.currentTimeMillis()
+        updateNotification("Listening...")
         serviceScope.launch {
-            try {
-                audioCaptureService?.startRecording()
-
-                // Listen for audio data and stream to PC
-                audioCaptureService?.audioDataFlow?.collect { audioData ->
-                    webSocketManager?.sendAudioData(audioData)
-                }
-
-                isListening = true
-                lastActivityTime = System.currentTimeMillis()
-
-                updateNotification("Dinleniyor...") // "Listening..." in Turkish
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start voice capture", e)
-                _serviceState.value = ServiceState.ERROR
-                isListening = false
+            audioCaptureService.startRecording()
+            audioCaptureService.audioDataFlow.collect { audioData ->
+                webSocketManager.sendAudioData(audioData)
             }
         }
     }
 
-    /**
-     * Stop voice command capture
-     */
     private fun stopVoiceCommandCapture() {
-        if (!isListening) {
-            return
-        }
-
+        if (!isListening) return
         Log.d(TAG, "Stopping voice command capture")
-        audioCaptureService?.stopRecording()
+        audioCaptureService.stopRecording()
         isListening = false
         _serviceState.value = ServiceState.RUNNING
-        updateNotification("PC'ye Bağlı") // "Connected to PC" in Turkish
+        updateNotification("Connected to PC")
     }
 
-    /**
-     * Connect to PC agent via WebSocket
-     */
     private suspend fun connectToPCAgent() {
         _connectionState.value = ConnectionState.CONNECTING
-
         try {
-            webSocketManager?.let { ws ->
-                val connected = ws.connect()
-
-                if (connected) {
-                    isConnected = true
-                    _connectionState.value = ConnectionState.CONNECTED
-                    lastActivityTime = System.currentTimeMillis()
-
-                    // Start monitoring WebSocket messages
-                    startWebSocketMonitoring()
-
-                    Log.d(TAG, "Connected to PC agent successfully")
-                } else {
-                    _connectionState.value = ConnectionState.ERROR
-                    throw Exception("Failed to connect to PC agent")
-                }
-            }
-
+            webSocketManager.connect()
+            isConnected = true
+            _connectionState.value = ConnectionState.CONNECTED
+            lastActivityTime = System.currentTimeMillis()
+            startWebSocketMonitoring()
+            Log.d(TAG, "Connected to PC agent successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect to PC agent", e)
-            _connectionState.value = ConnectionState.ERROR
             isConnected = false
-
-            // Start reconnection attempt
+            _connectionState.value = ConnectionState.ERROR
             scheduleReconnection()
         }
     }
@@ -316,130 +215,69 @@ class VoiceAssistantService : Service() {
      */
     private fun startWebSocketMonitoring() {
         serviceScope.launch {
-            webSocketManager?.messageFlow?.collect { message ->
-                handleMessage(message)
+            webSocketManager.messageFlow.collect { message ->
                 lastActivityTime = System.currentTimeMillis()
+                handleMessage(message)
             }
         }
     }
 
-    /**
-     * Handle incoming WebSocket messages from PC agent
-     */
-    private suspend fun handleMessage(message: WebSocketMessage) {
-        when (message.type) {
-            MessageType.TRANSCRIPTION_RESULT -> {
-                handleTranscriptionResult(message.data as String, message.confidence)
+    private suspend fun handleMessage(message: VoiceCommandResult) {
+        when (message) {
+            is VoiceCommandResult.Transcription -> {
+                Log.d(TAG, "Received transcription: ${message.text}")
+                voiceCommandRepository.updateCommandTranscription(message.text)
+                updateNotification("Processing command...")
             }
-            MessageType.COMMAND_RESULT -> {
-                handleCommandResult(message.data as CommandResult)
+            is VoiceCommandResult.Success -> {
+                Log.d(TAG, "Command successful: ${message.message}")
+                voiceCommandRepository.updateCommandStatus(CommandStatus.COMPLETED, message.message)
+                stopVoiceCommandCapture()
             }
-            MessageType.ERROR -> {
-                handleErrorMessage(message.data as String)
-            }
-            MessageType.PING -> {
-                // Respond to ping to keep connection alive
-                webSocketManager?.sendPong()
-            }
-        }
-    }
-
-    /**
-     * Handle speech-to-text transcription result
-     */
-    private suspend fun handleTranscriptionResult(transcription: String, confidence: Float) {
-        Log.d(TAG, "Received transcription: $transcription (confidence: $confidence)")
-
-        voiceCommandRepository?.let { repo ->
-            val command = repo.createCommand(
-                transcribedText = transcription,
-                confidenceScore = confidence,
-                durationMs = 0 // Will be updated by audio capture service
-            )
-
-            // Update UI state
-            updateNotification("Komut işleniyor...") // "Processing command..." in Turkish
-        }
-    }
-
-    /**
-     * Handle command execution result from PC
-     */
-    private suspend fun handleCommandResult(result: CommandResult) {
-        Log.d(TAG, "Received command result: $result")
-
-        voiceCommandRepository?.let { repo ->
-            // Update the current command with result
-            repo.currentCommand.value?.let { currentCommand ->
-                repo.updateCommandStatus(
-                    commandId = currentCommand.id,
-                    status = if (result.success) CommandStatus.COMPLETED else CommandStatus.ERROR,
-                    result = result.message,
-                    errorMessage = if (!result.success) result.message else null
-                )
+            is VoiceCommandResult.Error -> {
+                Log.e(TAG, "Command error: ${message.error}")
+                voiceCommandRepository.updateCommandStatus(CommandStatus.ERROR, error = message.error)
+                showErrorNotification(message.error)
+                stopVoiceCommandCapture()
             }
         }
-
-        // Stop listening and return to ready state
-        stopVoiceCommandCapture()
     }
 
-    /**
-     * Handle error message from PC
-     */
-    private fun handleErrorMessage(errorMessage: String) {
-        Log.w(TAG, "Received error from PC: $errorMessage")
-
-        // Show error notification
-        showErrorNotification(errorMessage)
-
-        // Stop listening on error
-        stopVoiceCommandCapture()
+    private fun handleServiceError(message: String) {
+        Log.e(TAG, "Service error: $message")
+        _serviceState.value = ServiceState.ERROR
+        showErrorNotification(message)
+        stopSelf()
     }
 
-    /**
-     * Schedule reconnection attempt with exponential backoff
-     */
     private fun scheduleReconnection() {
         serviceScope.launch {
             _connectionState.value = ConnectionState.RECONNECTING
+            var retryDelay = 1000L
+            val maxRetryDelay = 30000L
 
-            var retryDelay = 1000L // Start with 1 second
-            val maxRetryDelay = 30000L // Max 30 seconds
-
-            while (!isConnected && isActive) {
+            while (isActive && !isConnected) {
                 delay(retryDelay)
-
                 try {
+                    Log.d(TAG, "Attempting to reconnect...")
                     connectToPCAgent()
                     if (isConnected) break
                 } catch (e: Exception) {
-                    Log.w(TAG, "Reconnection attempt failed", e)
+                    Log.w(TAG, "Reconnection attempt failed: ${e.message}")
                 }
-
-                // Exponential backoff
                 retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
             }
         }
     }
 
-    /**
-     * Check for idle timeout and optimize battery usage
-     */
     private fun checkIdleTimeout() {
-        if (!isRunning) return
+        if (!isRunning || isListening) return
 
-        val timeSinceActivity = System.currentTimeMillis() - lastActivityTime
-        if (timeSinceActivity > IDLE_TIMEOUT_MS) {
+        if (System.currentTimeMillis() - lastActivityTime > IDLE_TIMEOUT_MS) {
             Log.d(TAG, "Entering idle mode for battery optimization")
-
-            // Optimize for battery: reduce monitoring frequency
             serviceScope.launch {
-                audioCaptureService?.cleanup()
-                // Keep minimal monitoring
-                while (isActive && !isListening) {
-                    delay(60000) // Check every minute when idle
-                }
+                audioCaptureService.cleanup()
+                webSocketManager.enterIdleMode()
             }
         }
     }
@@ -467,33 +305,20 @@ class VoiceAssistantService : Service() {
     /**
      * Create notification for foreground service
      */
-    private fun createNotification(): Notification {
-        val statusText = when (_connectionState.value) {
-            ConnectionState.CONNECTED -> "PC'ye Bağlı"
-            ConnectionState.CONNECTING -> "Bağlanıyor..."
-            ConnectionState.RECONNECTING -> "Yeniden Bağlanıyor..."
-            ConnectionState.ERROR -> "Bağlantı Hatası"
-            else -> "Hazır"
+    private fun createNotification(statusText: String): Notification {
+        val stopSelf = Intent(this, VoiceAssistantService::class.java).apply {
+            action = ACTION_STOP
         }
+        val pStopSelf = PendingIntent.getService(this, 0, stopSelf, PendingIntent.FLAG_IMMUTABLE)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PC Sesli Asistan")
+            .setContentTitle("PC Voice Assistant")
             .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
-            .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "Durdur",
-                PendingIntent.getService(
-                    this,
-                    0,
-                    Intent(this, VoiceAssistantService::class.java).setAction(ACTION_STOP),
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-            )
+            .addAction(R.drawable.ic_stop, "Stop", pStopSelf)
             .build()
     }
 
@@ -501,31 +326,18 @@ class VoiceAssistantService : Service() {
      * Update notification with new status
      */
     private fun updateNotification(statusText: String) {
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PC Sesli Asistan")
-            .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setOngoing(true)
-            .setSilent(true)
-            .build()
-
-        notificationManager?.notify(NOTIFICATION_ID, notification)
+        notificationManager.notify(NOTIFICATION_ID, createNotification(statusText))
     }
 
-    /**
-     * Show error notification
-     */
     private fun showErrorNotification(errorMessage: String) {
-        notificationManager?.notify(
-            NOTIFICATION_ID + 1,
-            NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Sesli Asistan Hatası")
-                .setContentText(errorMessage)
-                .setSmallIcon(android.R.drawable.stat_notify_error)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .build()
-        )
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Voice Assistant Error")
+            .setContentText(errorMessage)
+            .setSmallIcon(R.drawable.ic_error)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(NOTIFICATION_ID + 1, notification)
     }
 
     /**
@@ -533,43 +345,6 @@ class VoiceAssistantService : Service() {
      */
     private fun cleanup() {
         serviceScope.cancel()
-
-        audioCaptureService?.cleanup()
-        audioCaptureService = null
-
-        webSocketManager?.disconnect()
-        webSocketManager = null
-
-        voiceCommandRepository?.cleanup()
-        voiceCommandRepository = null
-
         idleCheckJob.cancel()
-    }
-
-    /**
-     * Service status for external queries
-     */
-    fun isConnected(): Boolean = isConnected
-    fun isRunning(): Boolean = isRunning
-    fun isListening(): Boolean = isListening
-
-    // Import required types that would be defined elsewhere
-    // These would typically be in separate files
-    // CommandStatus imported from repository
-    data class CommandResult(val success: Boolean, val message: String)
-    enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
-    data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)
-
-    // WebSocket manager placeholder (would be implemented in WebSocketManager.kt)
-    class WebSocketManager(private val context: Context) {
-        val messageFlow: Flow<WebSocketMessage> = emptyFlow()
-        suspend fun connect(): Boolean = false
-        fun disconnect() {}
-        fun sendAudioData(data: ByteArray) {}
-        fun sendPong() {}
-
-        class Factory(private val context: Context) {
-            fun create(): WebSocketManager = WebSocketManager(context)
-        }
     }
 }
