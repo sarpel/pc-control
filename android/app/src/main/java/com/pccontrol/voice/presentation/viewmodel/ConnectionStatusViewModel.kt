@@ -2,7 +2,11 @@ package com.pccontrol.voice.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pccontrol.voice.data.database.AppDatabase
+import com.pccontrol.voice.services.WebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,13 +46,40 @@ data class ConnectionStatusUiState(
  * ViewModel for connection status screen
  */
 @HiltViewModel
-class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
+class ConnectionStatusViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val webSocketManager: WebSocketManager
+) : ViewModel() {
 
+    private val database = AppDatabase.getDatabase(context)
     private val _uiState = MutableStateFlow(ConnectionStatusUiState())
     val uiState: StateFlow<ConnectionStatusUiState> = _uiState.asStateFlow()
 
     init {
         loadConnectionStatus()
+        observeConnectionState()
+    }
+
+    private fun observeConnectionState() {
+        viewModelScope.launch {
+            webSocketManager.isConnected.collect { isConnected ->
+                _uiState.value = _uiState.value.copy(isConnected = isConnected)
+            }
+        }
+
+        viewModelScope.launch {
+            webSocketManager.currentConnection.collect { connection ->
+                connection?.let {
+                    _uiState.value = _uiState.value.copy(
+                        pcName = it.pcName,
+                        pcIpAddress = it.pcIpAddress,
+                        lastConnectedTime = it.lastConnectedAt ?: 0L,
+                        latencyMs = it.latencyMs ?: 0,
+                        connectionCount = it.connectionCount ?: 0
+                    )
+                }
+            }
+        }
     }
 
     private fun loadConnectionStatus() {
@@ -56,28 +87,19 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             try {
-                // TODO: Load actual connection status from repository
-                // This would involve:
-                // 1. Check current connection state
-                // 2. Load paired devices from database
-                // 3. Get WiFi network information
-                // 4. Measure current latency
+                // Load paired devices from database
+                val connections = database.pcConnectionDao().getActiveConnections()
+                val pairedDevices = connections.map { conn ->
+                    PairedDevice(
+                        id = conn.connectionId,
+                        name = conn.pcName,
+                        model = "Windows PC",
+                        lastConnected = conn.lastConnectedAt ?: 0L
+                    )
+                }
 
-                // Simulate loading
-                kotlinx.coroutines.delay(500)
-
-                // Mock data for now
                 _uiState.value = _uiState.value.copy(
-                    isConnected = false,
-                    pcName = null,
-                    pcIpAddress = null,
-                    lastConnectedTime = System.currentTimeMillis() - 3600000, // 1 hour ago
-                    latencyMs = 0,
-                    connectionCount = 5,
-                    pairedDevices = emptyList(),
-                    wifiNetworkName = "Home WiFi",
-                    signalStrength = 85,
-                    pairingMethod = "manual",
+                    pairedDevices = pairedDevices,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -97,7 +119,9 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun removeDevice(deviceId: String) {
         viewModelScope.launch {
             try {
-                // TODO: Remove device from database
+                // Remove device from database
+                database.pcConnectionDao().deleteConnectionById(deviceId)
+                
                 val updatedDevices = _uiState.value.pairedDevices.filter { it.id != deviceId }
                 _uiState.value = _uiState.value.copy(
                     pairedDevices = updatedDevices,
@@ -116,7 +140,9 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun disconnect() {
         viewModelScope.launch {
             try {
-                // TODO: Disconnect from PC
+                // Disconnect from PC
+                webSocketManager.disconnect()
+                
                 _uiState.value = _uiState.value.copy(
                     isConnected = false,
                     pcName = null,
@@ -143,20 +169,29 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
             )
 
             try {
-                // TODO: Implement actual connection test
-                // This would involve:
-                // 1. Send ping to PC
-                // 2. Measure latency
-                // 3. Verify authentication
-
-                kotlinx.coroutines.delay(1500)
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    latencyMs = 45,
-                    statusMessage = "Bağlantı testi başarılı",
-                    isError = false
-                )
+                // Send ping message to test connection
+                val currentConnection = webSocketManager.currentConnection.value
+                if (currentConnection != null && webSocketManager.isConnected.value) {
+                    // Measure latency by sending a ping
+                    val startTime = System.currentTimeMillis()
+                    val result = webSocketManager.sendMessage("""{"type":"ping"}""")
+                    val endTime = System.currentTimeMillis()
+                    
+                    if (result.isSuccess) {
+                        val latency = (endTime - startTime).toInt()
+                        
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            latencyMs = latency,
+                            statusMessage = "Bağlantı testi başarılı (${latency}ms)",
+                            isError = false
+                        )
+                    } else {
+                        throw Exception("Ping başarısız")
+                    }
+                } else {
+                    throw Exception("Bağlantı yok")
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -170,7 +205,12 @@ class ConnectionStatusViewModel @Inject constructor() : ViewModel() {
     fun clearAllDevices() {
         viewModelScope.launch {
             try {
-                // TODO: Clear all paired devices from database
+                // Clear all paired devices from database
+                val allDevices = _uiState.value.pairedDevices
+                for (device in allDevices) {
+                    database.pcConnectionDao().deleteConnectionById(device.id)
+                }
+                
                 _uiState.value = _uiState.value.copy(
                     pairedDevices = emptyList(),
                     statusMessage = "Tüm cihazlar temizlendi",

@@ -2,7 +2,10 @@ package com.pccontrol.voice.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pccontrol.voice.network.PCDiscovery
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,8 +52,11 @@ data class SetupWizardUiState(
  * ViewModel for the setup wizard
  */
 @HiltViewModel
-class SetupWizardViewModel @Inject constructor() : ViewModel() {
+class SetupWizardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ViewModel() {
 
+    private val pcDiscovery = PCDiscovery(context)
     private val _uiState = MutableStateFlow(SetupWizardUiState())
     val uiState: StateFlow<SetupWizardUiState> = _uiState.asStateFlow()
 
@@ -96,24 +102,35 @@ class SetupWizardViewModel @Inject constructor() : ViewModel() {
                 errorMessage = null
             )
 
-            // TODO: Implement actual PC discovery logic
-            // Simulating discovery for now
-            kotlinx.coroutines.delay(2000)
+            try {
+                // Actual PC discovery logic using network scanning
+                val discoveredPCList = pcDiscovery.discoverPCs()
+                
+                val discoveredPCs = discoveredPCList.map { pc ->
+                    DiscoveredPC(
+                        id = pc.id,
+                        name = pc.name,
+                        ipAddress = pc.ipAddress,
+                        isAvailable = pc.isReachable
+                    )
+                }
 
-            // Mock discovered PCs
-            val mockPCs = listOf(
-                DiscoveredPC(
-                    id = "pc1",
-                    name = "Windows PC",
-                    ipAddress = "192.168.1.100",
-                    isAvailable = true
+                _uiState.value = _uiState.value.copy(
+                    isDiscovering = false,
+                    discoveredPCs = discoveredPCs,
+                    errorMessage = if (discoveredPCs.isEmpty()) {
+                        "PC bulunamadı. Manuel bağlantı deneyin."
+                    } else {
+                        null
+                    }
                 )
-            )
-
-            _uiState.value = _uiState.value.copy(
-                isDiscovering = false,
-                discoveredPCs = mockPCs
-            )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isDiscovering = false,
+                    discoveredPCs = emptyList(),
+                    errorMessage = "Keşif hatası: ${e.message}"
+                )
+            }
         }
     }
 
@@ -136,17 +153,28 @@ class SetupWizardViewModel @Inject constructor() : ViewModel() {
                 errorMessage = null
             )
 
-            // TODO: Implement actual pairing logic
-            kotlinx.coroutines.delay(1500)
+            try {
+                // Actual pairing logic would involve:
+                // 1. Establishing connection to selected PC
+                // 2. Exchanging pairing code
+                // 3. Certificate exchange
+                // For now, we simulate the process
+                kotlinx.coroutines.delay(1500)
 
-            _uiState.value = _uiState.value.copy(
-                isPairing = false,
-                isVerifying = true
-            )
+                _uiState.value = _uiState.value.copy(
+                    isPairing = false,
+                    isVerifying = true
+                )
 
-            // Auto-advance to verification
-            kotlinx.coroutines.delay(1000)
-            _uiState.value = _uiState.value.copy(isVerifying = false)
+                // Auto-advance to verification
+                kotlinx.coroutines.delay(1000)
+                _uiState.value = _uiState.value.copy(isVerifying = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isPairing = false,
+                    errorMessage = "Eşleştirme hatası: ${e.message}"
+                )
+            }
         }
     }
 
@@ -157,18 +185,26 @@ class SetupWizardViewModel @Inject constructor() : ViewModel() {
                 errorMessage = null
             )
 
-            // TODO: Implement actual verification logic
-            kotlinx.coroutines.delay(1500)
+            try {
+                // Actual verification would check certificate validity
+                // and ensure secure connection is established
+                kotlinx.coroutines.delay(1500)
 
-            _uiState.value = _uiState.value.copy(isVerifying = false)
+                _uiState.value = _uiState.value.copy(isVerifying = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isVerifying = false,
+                    errorMessage = "Doğrulama hatası: ${e.message}"
+                )
+            }
         }
     }
 
     fun finishSetup() {
-        // TODO: Save setup completion and navigate to main screen
         viewModelScope.launch {
-            // Save pairing information
-            // Navigate to main activity
+            // Save setup completion status
+            // In actual implementation, this would store pairing info to database
+            // and navigate to main screen
         }
     }
 }

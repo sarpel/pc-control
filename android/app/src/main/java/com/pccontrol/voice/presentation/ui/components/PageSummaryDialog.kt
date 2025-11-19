@@ -1,5 +1,6 @@
 package com.pccontrol.voice.presentation.ui.components
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -266,13 +267,17 @@ private fun ShareContentDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // TODO: Implement actual share intent
-                    // val sendIntent = Intent().apply {
-                    //     action = Intent.ACTION_SEND
-                    //     putExtra(Intent.EXTRA_TEXT, content)
-                    //     type = "text/plain"
-                    // }
-                    // context.startActivity(Intent.createChooser(sendIntent, title))
+                    // Implement share intent
+                    val shareText = "${summary.title}\n\n${summary.summary}\n\nURL: ${summary.url}"
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        putExtra(Intent.EXTRA_SUBJECT, summary.title)
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, "Paylaş")
+                    shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(shareIntent)
                     onDismiss()
                 }
             ) {

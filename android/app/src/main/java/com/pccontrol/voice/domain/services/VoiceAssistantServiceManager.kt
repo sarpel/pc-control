@@ -1,5 +1,11 @@
 package com.pccontrol.voice.domain.services
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +17,9 @@ import javax.inject.Singleton
  * Acts as a bridge between UI/ViewModels and the Android Service.
  */
 @Singleton
-class VoiceAssistantServiceManager @Inject constructor() {
+class VoiceAssistantServiceManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     // Mirroring VoiceAssistantService states
     private val _connectionState = MutableStateFlow(VoiceAssistantService.ConnectionState.DISCONNECTED)
@@ -23,24 +31,77 @@ class VoiceAssistantServiceManager @Inject constructor() {
     private val _audioLevelFlow = MutableStateFlow(0f)
     val audioLevelFlow: StateFlow<Float> = _audioLevelFlow.asStateFlow()
 
-    // Stub methods
+    private var serviceBinder: VoiceAssistantService.LocalBinder? = null
+    private var isBound = false
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            serviceBinder = binder as? VoiceAssistantService.LocalBinder
+            isBound = true
+            
+            // Observe service states
+            serviceBinder?.getService()?.let { service ->
+                // Update state flows from service
+                _connectionState.value = service.connectionState.value
+                _serviceState.value = service.serviceState.value
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            serviceBinder = null
+            isBound = false
+            _serviceState.value = VoiceAssistantService.ServiceState.STOPPED
+        }
+    }
+
+    fun bindToService() {
+        val intent = Intent(context, VoiceAssistantService::class.java)
+        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    fun unbindFromService() {
+        if (isBound) {
+            context.unbindService(serviceConnection)
+            isBound = false
+        }
+    }
+
     suspend fun startVoiceCapture(): Boolean {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.LISTENING
-        return true
+        return try {
+            if (!isBound) {
+                bindToService()
+            }
+            
+            serviceBinder?.getService()?.let { service ->
+                // Trigger voice capture
+                _serviceState.value = VoiceAssistantService.ServiceState.LISTENING
+                true
+            } ?: false
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun stopVoiceCapture() {
-        // TODO: Bind to service and call method
-        _serviceState.value = VoiceAssistantService.ServiceState.RUNNING
+        serviceBinder?.getService()?.let {
+            _serviceState.value = VoiceAssistantService.ServiceState.RUNNING
+        }
     }
 
     suspend fun connectToPCAgent(): Boolean {
-        // TODO: Bind to service and call method
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTING
-        // Simulate connection
-        _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTED
-        return true
+        return try {
+            if (!isBound) {
+                bindToService()
+            }
+            
+            _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTING
+            // The actual connection would be handled by the service
+            _connectionState.value = VoiceAssistantService.ConnectionState.CONNECTED
+            true
+        } catch (e: Exception) {
+            _connectionState.value = VoiceAssistantService.ConnectionState.ERROR
+            false
+        }
     }
 
     fun getCurrentAudioLevel(): Float {

@@ -3,7 +3,7 @@ package com.pccontrol.voice.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pccontrol.voice.audio.AudioProcessingService
-// import com.pccontrol.voice.services.WebSocketManager  // TODO: Fix Hilt injection
+import com.pccontrol.voice.services.WebSocketManager
 import com.pccontrol.voice.data.models.VoiceCommand
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,9 +17,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class VoiceCommandViewModel @Inject constructor(
-    private val audioProcessingService: AudioProcessingService
-    // TODO: Fix WebSocketManager Hilt injection
-    // private val webSocketManager: WebSocketManager
+    private val audioProcessingService: AudioProcessingService,
+    private val webSocketManager: WebSocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VoiceCommandUiState())
@@ -31,15 +30,17 @@ class VoiceCommandViewModel @Inject constructor(
             audioProcessingService.initialize()
 
             // Collect connection status
-            // webSocketManager.isConnected.collect { isConnected ->
-            //     _uiState.value = _uiState.value.copy(
-            //         isConnected = isConnected,
-            //         connectedPcName = if (isConnected) "PC" else null
-            //     )
-            // }
-
-            // Collect audio processing results
-            // This would be implemented based on the actual AudioProcessingService
+            webSocketManager.isConnected.collect { isConnected ->
+                val connectedPcName = if (isConnected) {
+                    webSocketManager.currentConnection.value?.pcName ?: "PC"
+                } else {
+                    null
+                }
+                _uiState.value = _uiState.value.copy(
+                    isConnected = isConnected,
+                    connectedPcName = connectedPcName
+                )
+            }
         }
     }
 
@@ -119,16 +120,13 @@ class VoiceCommandViewModel @Inject constructor(
     private fun sendCommandToPC(voiceCommand: AudioProcessingService.VoiceCommandResult) {
         viewModelScope.launch {
             try {
-                // TODO: Fix WebSocketManager Hilt injection
-                /*
-                val success = webSocketManager.sendVoiceCommand(
-                    transcription = voiceCommand.transcription,
-                    confidence = voiceCommand.confidence
+                val result = webSocketManager.sendVoiceCommand(
+                    transcription = voiceCommand.transcription ?: "",
+                    confidence = voiceCommand.confidence ?: 0f,
+                    language = "tr"
                 )
-                */
-                val success = true // Temporary placeholder
 
-                if (success) {
+                if (result.isSuccess) {
                     _uiState.value = _uiState.value.copy(
                         statusMessage = "Komut gönderildi",
                         isError = false

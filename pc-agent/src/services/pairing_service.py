@@ -80,9 +80,28 @@ class PairingService:
 
     def _load_jwt_secret(self) -> str:
         """Load JWT secret from secure storage."""
-        # TODO: Load from Windows Credential Manager
-        # For MVP, generate a random secret (NOT PRODUCTION READY)
-        return secrets.token_urlsafe(32)
+        # Load from Windows Credential Manager or generate new one
+        # For production: Should use Windows Credential Manager via win32cred
+        # For now, we'll use a file-based approach with proper permissions
+        
+        import os
+        from pathlib import Path
+        
+        secret_file = Path.home() / ".pc-voice-control" / "jwt_secret.txt"
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        if secret_file.exists():
+            # Load existing secret
+            with open(secret_file, 'r') as f:
+                return f.read().strip()
+        else:
+            # Generate new secret and save it
+            new_secret = secrets.token_urlsafe(32)
+            with open(secret_file, 'w') as f:
+                f.write(new_secret)
+            # Set restrictive permissions (owner read/write only)
+            os.chmod(secret_file, 0o600)
+            return new_secret
 
     async def initiate_pairing(
         self,

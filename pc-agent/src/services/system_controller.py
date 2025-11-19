@@ -1217,12 +1217,33 @@ class SystemController:
         """
         return {
             "os_type": self.os_type,
-            "admin_privileges": False,  # TODO: Implement admin check
+            "admin_privileges": self._check_admin_privileges(),
             "supported_operations": self.get_supported_operations(),
             "applications_mapped": len(self.applications),
             "temp_directory": str(self.temp_dir),
             "protected_directories": self.protected_directories
         }
+
+    def _check_admin_privileges(self) -> bool:
+        """
+        Check if the process has administrator privileges.
+        
+        Returns:
+            True if running with admin privileges, False otherwise
+        """
+        import ctypes
+        import os
+        
+        try:
+            if self.os_type == "windows":
+                # On Windows, check if process is elevated
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            else:
+                # On Unix-like systems, check if effective UID is 0 (root)
+                return os.geteuid() == 0
+        except Exception:
+            # If check fails, assume no admin privileges
+            return False
 
 
 # Global service instance

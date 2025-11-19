@@ -3,6 +3,7 @@ package com.pccontrol.voice.di
 import android.content.Context
 import com.pccontrol.voice.audio.AudioProcessingService
 import com.pccontrol.voice.data.repository.VoiceCommandRepository
+import com.pccontrol.voice.services.WebSocketManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,5 +29,13 @@ object AppModule {
         @ApplicationContext context: Context
     ): AudioProcessingService {
         return AudioProcessingService.getInstance(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWebSocketManager(
+        @ApplicationContext context: Context
+    ): WebSocketManager {
+        return WebSocketManager.getInstance(context)
     }
 }
