@@ -3,6 +3,7 @@ package com.pccontrol.voice.domain.services
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import kotlinx.coroutines.*
@@ -53,10 +54,12 @@ class VoiceAssistantService : Service() {
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val binder = LocalBinder()
     private var audioCaptureService: AudioCaptureService? = null
     private var voiceCommandRepository: VoiceCommandRepository? = null
     private var webSocketManager: WebSocketManager? = null
     private var notificationManager: NotificationManagerCompat? = null
+    private var audioLevelJob: Job? = null
 
     // Service state tracking
     private var isRunning = false
@@ -70,6 +73,9 @@ class VoiceAssistantService : Service() {
 
     private val _serviceState = MutableStateFlow(ServiceState.STOPPED)
     val serviceState: StateFlow<ServiceState> = _serviceState
+
+    private val _audioLevelFlow = MutableStateFlow(0f)
+    val audioLevel: StateFlow<Float> = _audioLevelFlow
 
     // Idle detection
     private val idleCheckJob = serviceScope.launch {
@@ -122,10 +128,7 @@ class VoiceAssistantService : Service() {
         return START_STICKY // Service will be restarted if killed
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        // Return null for non-bound service
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
         super.onDestroy()
@@ -133,6 +136,35 @@ class VoiceAssistantService : Service() {
 
         // Cleanup all resources
         cleanup()
+    }
+
+    inner class LocalBinder : Binder() {
+        fun getService(): VoiceAssistantService = this@VoiceAssistantService
+    }
+
+    fun startListeningFromManager(): Boolean {
+        if (!isRunning) {
+            startVoiceAssistant()
+        }
+        return if (isConnected) {
+            startVoiceCommandCapture()
+            true
+        } else {
+            serviceScope.launch { connectToPCAgent() }
+            false
+        }
+    }
+
+    fun stopListeningFromManager() {
+        stopVoiceCommandCapture()
+    }
+
+    suspend fun connectFromManager(): Boolean = withContext(serviceScope.coroutineContext) {
+        if (!isRunning) {
+            startVoiceAssistant()
+        }
+        connectToPCAgent()
+        isConnected
     }
 
     /**
@@ -259,6 +291,13 @@ class VoiceAssistantService : Service() {
                 isListening = false
             }
         }
+
+        audioLevelJob?.cancel()
+        audioLevelJob = serviceScope.launch {
+            audioCaptureService?.audioLevelFlow?.collect { level ->
+                _audioLevelFlow.value = level
+            }
+        }
     }
 
     /**
@@ -271,6 +310,8 @@ class VoiceAssistantService : Service() {
 
         Log.d(TAG, "Stopping voice command capture")
         audioCaptureService?.stopRecording()
+        audioLevelJob?.cancel()
+        audioLevelJob = null
         isListening = false
         _serviceState.value = ServiceState.RUNNING
         updateNotification("PC'ye Bağlı") // "Connected to PC" in Turkish
@@ -536,6 +577,9 @@ class VoiceAssistantService : Service() {
 
         audioCaptureService?.cleanup()
         audioCaptureService = null
+
+        audioLevelJob?.cancel()
+        audioLevelJob = null
 
         webSocketManager?.disconnect()
         webSocketManager = null
