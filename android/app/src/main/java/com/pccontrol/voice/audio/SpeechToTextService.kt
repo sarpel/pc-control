@@ -249,9 +249,11 @@ class SpeechToTextService private constructor(
                     connectTimeout = 10_000  // 10 seconds to establish connection
                     readTimeout = 30_000     // 30 seconds to read data
                 }
+                // Note: getInputStream() implicitly calls connect()
                 
                 BufferedInputStream(connection.getInputStream()).use { input ->
                     FileOutputStream(modelFile).use { output ->
+                        // 8KB buffer for efficient large file downloads (model is ~75MB)
                         val buffer = ByteArray(8 * 1024)
                         var count: Int
                         while (input.read(buffer).also { count = it } != -1) {
