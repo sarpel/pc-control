@@ -38,6 +38,7 @@ except ImportError:
     logging.warning("Selenium not available. Browser control features will be limited.")
 
 from config.settings import get_settings
+from src.models.action import Action, ActionType as ModelActionType
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,35 @@ class BrowserControlService:
         self.is_initialized = False
         self.current_url: Optional[str] = None
         self.page_title: Optional[str] = None
+
+    async def execute_action(self, action: Action) -> BrowserActionResult:
+        """
+        Execute an Action from the new data model.
+        """
+        if action.action_type == ModelActionType.BROWSER:
+            params = action.parameters or {}
+            
+            # Infer operation from parameters
+            if "url" in params:
+                return await self.navigate_to_url(params["url"])
+            elif "query" in params:
+                return await self.search_web(params["query"])
+            elif "extract_type" in params:
+                return await self.extract_page_content(params["extract_type"])
+            else:
+                return BrowserActionResult(
+                    success=False,
+                    action_type="unknown",
+                    execution_time_ms=0,
+                    error_message="Could not infer browser operation from parameters"
+                )
+        else:
+             return BrowserActionResult(
+                success=False,
+                action_type=str(action.action_type),
+                execution_time_ms=0,
+                error_message=f"Unsupported action type: {action.action_type}"
+            )
 
     async def initialize(self, browser_type: BrowserType = BrowserType.CHROME) -> bool:
         """

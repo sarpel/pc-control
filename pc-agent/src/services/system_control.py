@@ -606,10 +606,17 @@ class SystemControlService:
     async def _find_files_windows(self, query: str, path: str, file_type: Optional[str], max_results: int) -> List[Dict[str, Any]]:
         """Find files on Windows."""
         try:
+            # Build filter script
+            filter_script = f'Where-Object {{ $_.Name -like "*{query}*" }}'
+            if file_type:
+                # Ensure file_type starts with . if not present, or handle as extension
+                ext = file_type if file_type.startswith('.') else f'.{file_type}'
+                filter_script += f' | Where-Object {{ $_.Extension -eq "{ext}" }}'
+
             # Use PowerShell for file search
             ps_script = f"""
             Get-ChildItem -Path "{path}" -Recurse -File |
-            Where-Object {{ $_.Name -like "*{query}*" }} |
+            {filter_script} |
             Select-Object FullName, Name, Length, LastWriteTime |
             Select-Object -First {max_results} |
             ConvertTo-Json

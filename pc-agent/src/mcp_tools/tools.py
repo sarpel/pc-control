@@ -403,7 +403,7 @@ class MCPToolsRouter:
             return {
                 "success": result.success,
                 "message": result.message,
-                "data": {"info": result.info} if result.success else None
+                "data": {"info": result.data} if result.success else None
             }
         except Exception as e:
             return {"success": False, "message": f"Sistem bilgisi alınamadı: {str(e)}"}

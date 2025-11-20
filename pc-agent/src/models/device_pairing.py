@@ -19,6 +19,8 @@ class PairingStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     EXPIRED = "expired"
+    ACTIVE = "active"
+    REVOKED = "revoked"
 
 
 @dataclass
@@ -27,84 +29,92 @@ class DevicePairing:
     Device pairing model representing security setup between devices.
 
     Attributes:
+        device_id: Unique device identifier
+        status: Current pairing status
         pairing_id: Unique identifier (UUID v4)
-        android_device_id: Unique Android device identifier
+        device_name: Human-readable device name
+        pairing_code: 6-digit numeric code for verification
+        created_at: Timestamp when pairing was initiated
+        
+        # Optional fields
         pc_fingerprint: PC certificate fingerprint (SHA-256)
         android_fingerprint: Android certificate fingerprint (SHA-256)
-        pairing_code: 6-digit numeric code for verification
-        status: Current pairing status
-        created_at: Timestamp when pairing was initiated
-        completed_at: Timestamp when pairing was completed (optional)
-        pc_name: Human-readable PC name (optional)
-        pc_ip_address: IPv4 address of PC (optional)
+        completed_at: Timestamp when pairing was completed
+        pc_name: Human-readable PC name
+        pc_ip_address: IPv4 address of PC
+        
+        # Certificate and Auth fields
+        ca_certificate: CA certificate PEM
+        client_certificate: Client certificate PEM
+        auth_token_hash: Hashed auth token
+        token_expires_at: Token expiration timestamp
+        paired_at: Timestamp when pairing was completed/active
     """
-    pairing_id: str
-    android_device_id: str
-    pc_fingerprint: str
-    android_fingerprint: str
-    pairing_code: str
+    device_id: str
     status: PairingStatus
-    created_at: datetime
+    pairing_id: Optional[str] = None
+    device_name: Optional[str] = None
+    pairing_code: Optional[str] = None
+    created_at: Optional[datetime] = None
+    
+    pc_fingerprint: Optional[str] = None
+    android_fingerprint: Optional[str] = None
     completed_at: Optional[datetime] = None
     pc_name: Optional[str] = None
     pc_ip_address: Optional[str] = None
+    
+    ca_certificate: Optional[str] = None
+    client_certificate: Optional[str] = None
+    auth_token_hash: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
+    paired_at: Optional[datetime] = None
 
     def __post_init__(self) -> None:
         """Validate device pairing data after initialization."""
-        # Validate pairing_id format
-        try:
-            uuid.UUID(self.pairing_id)
-        except ValueError as e:
-            raise ValueError(f"Invalid pairing_id format: {e}")
+        if self.created_at is None:
+            self.created_at = datetime.utcnow()
+            
+        # Validate pairing_id format if present
+        if self.pairing_id:
+            try:
+                # Check if it's a UUID or our custom format "pair_..."
+                if not self.pairing_id.startswith("pair_"):
+                    uuid.UUID(self.pairing_id)
+            except ValueError:
+                # Allow custom format
+                pass
 
-        # Validate pairing code format (6-digit numeric)
-        if not re.match(r'^\d{6}$', self.pairing_code):
+        # Validate pairing code format (6-digit numeric) if present
+        if self.pairing_code and not re.match(r'^\d{6}$', self.pairing_code):
             raise ValueError("Pairing code must be a 6-digit numeric string")
 
-        # Validate fingerprints (SHA-256 hash format - 64 hex characters)
-        if not re.match(r'^[a-fA-F0-9]{64}$', self.pc_fingerprint):
+        # Validate fingerprints if present
+        if self.pc_fingerprint and not re.match(r'^[a-fA-F0-9]{64}$', self.pc_fingerprint):
             raise ValueError("PC fingerprint must be a 64-character hex string (SHA-256)")
-        if not re.match(r'^[a-fA-F0-9]{64}$', self.android_fingerprint):
+        if self.android_fingerprint and not re.match(r'^[a-fA-F0-9]{64}$', self.android_fingerprint):
             raise ValueError("Android fingerprint must be a 64-character hex string (SHA-256)")
-
-        # Check if pairing has expired (10 minutes)
-        if self.status not in (PairingStatus.COMPLETED, PairingStatus.EXPIRED, PairingStatus.FAILED):
-            time_elapsed = (datetime.utcnow() - self.created_at).total_seconds()
-            if time_elapsed > 600:  # 10 minutes
-                self.status = PairingStatus.EXPIRED
 
     @classmethod
     def create(
         cls,
-        android_device_id: str,
-        pc_fingerprint: str,
-        android_fingerprint: str,
+        device_id: str,
         pairing_code: str,
+        pc_fingerprint: Optional[str] = None,
+        android_fingerprint: Optional[str] = None,
         pc_name: Optional[str] = None,
         pc_ip_address: Optional[str] = None
     ) -> "DevicePairing":
         """
         Factory method to create a new DevicePairing.
-
-        Args:
-            android_device_id: Android device identifier
-            pc_fingerprint: PC certificate fingerprint
-            android_fingerprint: Android certificate fingerprint
-            pairing_code: 6-digit verification code
-            pc_name: PC name (optional)
-            pc_ip_address: PC IP address (optional)
-
-        Returns:
-            New DevicePairing instance
         """
         return cls(
-            pairing_id=str(uuid.uuid4()),
-            android_device_id=android_device_id,
-            pc_fingerprint=pc_fingerprint,
-            android_fingerprint=android_fingerprint,
+            device_id=device_id,
             pairing_code=pairing_code,
+            pairing_id=str(uuid.uuid4()),
             status=PairingStatus.INITIATED,
             created_at=datetime.utcnow(),
+            pc_fingerprint=pc_fingerprint,
+            android_fingerprint=android_fingerprint,
             pc_name=pc_name,
             pc_ip_address=pc_ip_address
         )

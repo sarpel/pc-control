@@ -164,7 +164,9 @@ class DatabaseConnection:
 
     async def _run_migration(self, conn: aiosqlite.Connection, migration: "Migration") -> None:
         """Run a single migration within a transaction."""
-        async with conn.transaction():
+        try:
+            await conn.execute("BEGIN")
+            
             # Execute migration SQL
             if migration.sql.strip():
                 await conn.executescript(migration.sql)
@@ -175,6 +177,11 @@ class DatabaseConnection:
                 INSERT INTO {self._migration_table} (version, description, applied_at, checksum)
                 VALUES (?, ?, ?, ?)
             """, (migration.version, migration.description, datetime.utcnow(), checksum))
+            
+            await conn.commit()
+        except Exception:
+            await conn.rollback()
+            raise
 
     def _calculate_checksum(self, sql: str) -> str:
         """Calculate checksum for migration SQL."""
@@ -213,6 +220,7 @@ class DatabaseConnection:
             else:
                 # Create new connection
                 conn = await aiosqlite.connect(self.db_path)
+                conn.row_factory = aiosqlite.Row
                 # Enable WAL mode for better concurrency
                 await conn.execute("PRAGMA journal_mode=WAL")
                 # Enable foreign key constraints
@@ -242,6 +250,18 @@ class DatabaseConnection:
                 # Pool is full, close connection
                 await conn.close()
                 logger.debug("Pool full, closed connection")
+
+    async def fetch_one(self, query: str, params: tuple = ()) -> Optional[Dict[str, Any]]:
+        """Execute query and return single row."""
+        return await self.execute_query(query, params, fetch_one=True)
+
+    async def fetch_all(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+        """Execute query and return all rows."""
+        return await self.execute_query(query, params, fetch_all=True)
+
+    async def execute(self, query: str, params: tuple = ()) -> None:
+        """Execute query without returning results."""
+        await self.execute_query(query, params)
 
     async def execute_query(
         self,
@@ -459,8 +479,8 @@ class DatabaseConnection:
         # Note: Can't use await in __del__, so this is best-effort
         try:
             # Close remaining connections synchronously
-            for conn in self._connection_pool:
-                conn.close()
+            # for conn in self._connection_pool:
+            #     conn.close()
             self._connection_pool.clear()
         except Exception:
             pass

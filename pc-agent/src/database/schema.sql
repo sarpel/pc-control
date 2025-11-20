@@ -75,14 +75,14 @@ CREATE TABLE IF NOT EXISTS actions (
 -- Stores pairing information for security setup
 CREATE TABLE IF NOT EXISTS device_pairing (
     pairing_id TEXT PRIMARY KEY,
-    android_device_id TEXT NOT NULL,
-    android_fingerprint TEXT NOT NULL,
-    pc_fingerprint TEXT NOT NULL,
+    device_id TEXT NOT NULL,           -- Renamed from android_device_id for consistency
+    android_fingerprint TEXT,          -- Made optional
+    pc_fingerprint TEXT,               -- Made optional
     pairing_code TEXT NOT NULL CHECK (
         pairing_code GLOB '[0-9][0-9][0-9][0-9][0-9][0-9]'
     ),
     status TEXT NOT NULL DEFAULT 'initiated' CHECK (
-        status IN ('initiated', 'awaiting_confirmation', 'completed', 'failed', 'expired')
+        status IN ('initiated', 'awaiting_confirmation', 'completed', 'failed', 'expired', 'active', 'revoked')
     ),
     created_at DATETIME NOT NULL,
     completed_at DATETIME,
@@ -95,7 +95,14 @@ CREATE TABLE IF NOT EXISTS device_pairing (
     os_version TEXT,
     pairing_method TEXT DEFAULT 'manual', -- 'manual', 'qr', 'nfc'
     created_by TEXT DEFAULT 'pc_agent',
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Additional fields used by PairingService
+    ca_certificate TEXT,
+    client_certificate TEXT,
+    auth_token_hash TEXT,
+    token_expires_at DATETIME,
+    paired_at DATETIME
 );
 
 -- Command History Table
@@ -133,7 +140,7 @@ CREATE TABLE IF NOT EXISTS connection_sessions (
     client_info TEXT,                   -- JSON with client information
     error_details TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES device_pairing (android_device_id)
+    FOREIGN KEY (device_id) REFERENCES device_pairing (device_id)
 );
 
 -- System Audit Log Table
@@ -227,7 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_actions_status ON actions (status);
 CREATE INDEX IF NOT EXISTS idx_actions_action_type ON actions (action_type);
 CREATE INDEX IF NOT EXISTS idx_actions_created_at ON actions (created_at);
 
-CREATE INDEX IF NOT EXISTS idx_device_pairing_android_device_id ON device_pairing (android_device_id);
+CREATE INDEX IF NOT EXISTS idx_device_pairing_device_id ON device_pairing (device_id);
 CREATE INDEX IF NOT EXISTS idx_device_pairing_status ON device_pairing (status);
 CREATE INDEX IF NOT EXISTS idx_device_pairing_expires_at ON device_pairing (expires_at);
 
@@ -286,11 +293,11 @@ END;
 CREATE VIEW IF NOT EXISTS active_connections AS
 SELECT
     pc.*,
-    dp.android_device_id,
+    dp.device_id,
     dp.android_fingerprint,
     dp.device_name as android_device_name
 FROM pc_connections pc
-JOIN device_pairing dp ON pc.device_id = dp.android_device_id
+JOIN device_pairing dp ON pc.device_id = dp.device_id
 WHERE pc.status = 'authenticated'
   AND pc.last_heartbeat > datetime('now', '-5 minutes');
 
@@ -302,7 +309,7 @@ SELECT
     COUNT(a.action_id) as action_count
 FROM voice_commands vc
 LEFT JOIN pc_connections pc ON vc.device_id = pc.device_id
-LEFT JOIN device_pairing dp ON vc.device_id = dp.android_device_id
+LEFT JOIN device_pairing dp ON vc.device_id = dp.device_id
 LEFT JOIN actions a ON vc.command_id = a.command_id
 WHERE vc.timestamp > datetime('now', '-1 hour')
 GROUP BY vc.command_id
