@@ -4,7 +4,9 @@ import android.content.Context
 import android.util.Log
 import com.pccontrol.voice.data.models.DevicePairing
 import com.pccontrol.voice.data.models.PCConnection
+import com.pccontrol.voice.data.database.AppDatabase
 import com.pccontrol.voice.network.WebSocketClient
+import com.pccontrol.voice.services.WebSocketManager
 import com.pccontrol.voice.security.KeyStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,8 +31,9 @@ import java.net.URL
  */
 class PairingRepository(
     private val context: Context,
-    private val webSocketClient: WebSocketClient,
-    private val keyStoreManager: KeyStoreManager
+    private val webSocketManager: WebSocketManager,
+    private val keyStoreManager: KeyStoreManager,
+    private val appDatabase: AppDatabase
 ) {
     companion object {
         private const val TAG = "PairingRepository"
@@ -198,6 +201,40 @@ class PairingRepository(
     }
 
     /**
+     * Check status of an ongoing pairing session.
+     */
+    suspend fun checkPairingStatus(
+        pairingId: String,
+        pcIpAddress: String
+    ): Result<PairingStatusResponse> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status/$pairingId")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                }
+
+                val responseCode = connection.responseCode
+                val responseBody = connection.inputStream.bufferedReader().readText()
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = json.decodeFromString<PairingStatusResponse>(responseBody)
+                    Result.success(response)
+                } else {
+                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorMessage = parseErrorMessage(responseCode, errorBody)
+                    Result.failure(Exception(errorMessage))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking pairing status", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    /**
      * Revoke device pairing.
      */
     suspend fun revokePairing(
@@ -250,32 +287,28 @@ class PairingRepository(
                 return Result.failure(Exception("Kimlik doğrulama anahtarı bulunamadı"))
             }
 
-            // Connect with WebSocket
-            webSocketClient.connect()
+            // Create connection info
+            val connectionId = java.util.UUID.randomUUID()
+            val connection = PCConnection(
+                connectionId = connectionId,
+                pcIpAddress = pcIpAddress,
+                pcMacAddress = "unknown", // Would be fetched from status
+                pcName = "PC", // Would be fetched from status
+                status = com.pccontrol.voice.data.models.ConnectionStatus.CONNECTED,
+                authenticationToken = authToken,
+                lastConnectedAt = System.currentTimeMillis()
+            )
 
-            // Wait for connection to establish
-            webSocketClient.connectionState.first { it == com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED }
+            // Store connection info first so WebSocketManager can find it
+            storeConnectionInfo(connection)
 
-            // Check if connected
-            val connected = webSocketClient.connectionState.value == 
-                com.pccontrol.voice.network.WebSocketClient.ConnectionState.CONNECTED
+            // Connect with WebSocketManager
+            val connectResult = webSocketManager.connectToPc(connectionId.toString())
 
-            if (connected) {
-                // Store connection info
-                val connection = PCConnection(
-                    connectionId = java.util.UUID.randomUUID(),
-                    pcIpAddress = pcIpAddress,
-                    pcMacAddress = "unknown", // Would be fetched from status
-                    pcName = "PC", // Would be fetched from status
-                    status = com.pccontrol.voice.data.models.ConnectionStatus.CONNECTED,
-                    authenticationToken = authToken,
-                    lastConnectedAt = System.currentTimeMillis()
-                )
-
-                storeConnectionInfo(connection)
+            if (connectResult.isSuccess) {
                 Result.success(true)
             } else {
-                Result.failure(Exception("WebSocket bağlantısı kurulamadı"))
+                Result.failure(connectResult.exceptionOrNull() ?: Exception("WebSocket bağlantısı kurulamadı"))
             }
 
         } catch (e: Exception) {
@@ -355,9 +388,13 @@ class PairingRepository(
     /**
      * Store connection information for later use.
      */
-    private fun storeConnectionInfo(connection: PCConnection) {
-        // Store in SharedPreferences or database
+    private suspend fun storeConnectionInfo(connection: PCConnection) {
         try {
+            // Store in database
+            val entity = connection.toEntity()
+            appDatabase.pcConnectionDao().insertConnection(entity)
+            
+            // Also store in SharedPreferences for legacy/backup (optional)
             val connectionJson = json.encodeToString(connection)
             val prefs = context.getSharedPreferences("pc_connections", Context.MODE_PRIVATE)
             prefs.edit().putString(connection.connectionId.toString(), connectionJson).apply()
@@ -368,6 +405,22 @@ class PairingRepository(
 
     /**
      * Remove stored pairing data.
+     */
+    suspend fun removePairing(deviceId: String) {
+        try {
+            // Remove from database
+            // Note: deviceId here is likely the connectionId or related
+            // If deviceId is connectionId:
+            appDatabase.pcConnectionDao().deleteConnection(deviceId)
+            
+            removeStoredData(deviceId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing pairing", e)
+        }
+    }
+
+    /**
+     * Remove stored pairing data (internal).
      */
     private fun removeStoredData(deviceId: String) {
         try {

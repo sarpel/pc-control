@@ -351,10 +351,10 @@ class QuickSettingsTileService : TileService() {
                 isConnecting = true
                 // Implementation for connecting to VoiceAssistantService
                 // This would bind to the actual service and establish connection
-                delay(1000) // Simulate connection time
-                isConnected = true
+                // delay(1000) // Simulate connection time
+                isConnected = false // Default to false until implemented
                 isConnecting = false
-                true
+                false
             } catch (e: Exception) {
                 isConnected = false
                 isConnecting = false

@@ -10,8 +10,12 @@ import kotlinx.coroutines.flow.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.pccontrol.voice.data.repository.CommandStatus
 import com.pccontrol.voice.data.repository.VoiceCommandRepository
+import com.pccontrol.voice.data.repository.CommandStatus
+import com.pccontrol.voice.services.WebSocketManager
+import com.pccontrol.voice.services.CommandResult
+import com.pccontrol.voice.services.MessageType
+import com.pccontrol.voice.services.WebSocketMessage
 
 /**
  * Voice Assistant Foreground Service
@@ -122,9 +126,32 @@ class VoiceAssistantService : Service() {
         return START_STICKY // Service will be restarted if killed
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        // Return null for non-bound service
-        return null
+    inner class LocalBinder : android.os.Binder() {
+        fun getService(): VoiceAssistantService = this@VoiceAssistantService
+    }
+
+    private val binder = LocalBinder()
+
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
+    }
+
+    // Public methods for ServiceManager
+    fun startCapture() {
+        startVoiceCommandCapture()
+    }
+
+    fun stopCapture() {
+        stopVoiceCommandCapture()
+    }
+
+    fun connect() {
+        // Trigger connection logic if needed, or ensure service is started
+        if (!isRunning) {
+            startVoiceAssistant()
+        }
+        // Force reconnection attempt if needed
+        webSocketManager?.connect()
     }
 
     override fun onDestroy() {
@@ -145,7 +172,7 @@ class VoiceAssistantService : Service() {
         audioCaptureService = AudioCaptureService.Factory(this).create()
 
         // Initialize WebSocket manager
-        webSocketManager = WebSocketManager.Factory(this).create()
+        webSocketManager = WebSocketManager.getInstance(this)
     }
 
     /**
@@ -552,24 +579,5 @@ class VoiceAssistantService : Service() {
     fun isConnected(): Boolean = isConnected
     fun isRunning(): Boolean = isRunning
     fun isListening(): Boolean = isListening
-
-    // Import required types that would be defined elsewhere
-    // These would typically be in separate files
-    // CommandStatus imported from repository
-    data class CommandResult(val success: Boolean, val message: String)
-    enum class MessageType { TRANSCRIPTION_RESULT, COMMAND_RESULT, ERROR, PING }
-    data class WebSocketMessage(val type: MessageType, val data: Any, val confidence: Float = 0f)
-
-    // WebSocket manager placeholder (would be implemented in WebSocketManager.kt)
-    class WebSocketManager(private val context: Context) {
-        val messageFlow: Flow<WebSocketMessage> = emptyFlow()
-        suspend fun connect(): Boolean = false
-        fun disconnect() {}
-        fun sendAudioData(data: ByteArray) {}
-        fun sendPong() {}
-
-        class Factory(private val context: Context) {
-            fun create(): WebSocketManager = WebSocketManager(context)
-        }
-    }
+}
 }

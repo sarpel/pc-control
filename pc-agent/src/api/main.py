@@ -19,8 +19,7 @@ from api.middleware import (
     error_handler_middleware
 )
 from api.rest_endpoints import pairing_router, wol_router
-# TODO: Fix websocket_router import - websocket_server.py doesn't export a router
-# from api.websocket_server import websocket_router
+from api.websocket_server import router as websocket_router
 from database.connection import initialize_database, close_database
 from services.certificate_service import CertificateService
 from services.connection_manager import ConnectionManager
@@ -113,8 +112,7 @@ setup_middleware(app)
 # Include routers
 app.include_router(pairing_router)
 app.include_router(wol_router)
-# TODO: Include websocket router once it's properly exported
-# app.include_router(websocket_router)
+app.include_router(websocket_router)
 
 
 # Root endpoint

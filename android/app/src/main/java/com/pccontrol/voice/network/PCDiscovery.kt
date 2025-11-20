@@ -247,35 +247,141 @@ class PCDiscovery(private val context: Context) {
     /**
      * Discover PCs using SSDP (Simple Service Discovery Protocol).
      */
-    private suspend fun discoverBySSDP(): List<DiscoveredPC> {
-        return try {
+    private suspend fun discoverBySSDP(): List<DiscoveredPC> = withContext(Dispatchers.IO) {
+        val discoveredPCs = mutableListOf<DiscoveredPC>()
+        try {
             Log.d(TAG, "Starting SSDP discovery")
-
-            // SSDP discovery would look for devices advertising themselves
-            // For MVP, this is a placeholder implementation
-            delay(1000) // Simulate discovery time
-
-            emptyList() // Would return discovered PCs in real implementation
-
+            val socket = DatagramSocket()
+            socket.soTimeout = 2000
+            
+            val ssdpRequest = "M-SEARCH * HTTP/1.1\r\n" +
+                    "HOST: 239.255.255.250:1900\r\n" +
+                    "MAN: \"ssdp:discover\"\r\n" +
+                    "MX: 1\r\n" +
+                    "ST: urn:schemas-upnp-org:device:Basic:1\r\n" +
+                    "\r\n"
+            
+            val sendData = ssdpRequest.toByteArray()
+            val sendPacket = DatagramPacket(
+                sendData, 
+                sendData.size, 
+                InetAddress.getByName("239.255.255.250"), 
+                1900
+            )
+            
+            socket.send(sendPacket)
+            
+            val receiveData = ByteArray(1024)
+            val receivePacket = DatagramPacket(receiveData, receiveData.size)
+            
+            val endTime = System.currentTimeMillis() + 2000
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    socket.receive(receivePacket)
+                    val response = String(receivePacket.data, 0, receivePacket.length)
+                    val ip = receivePacket.address.hostAddress
+                    
+                    // Check if it's our PC agent (simplified check)
+                    if (response.contains("PC-Control") && ip != null) {
+                         discoveredPCs.add(
+                            DiscoveredPC(
+                                id = "pc_${ip.replace(".", "_")}",
+                                name = "PC Agent (SSDP)",
+                                ipAddress = ip,
+                                port = PC_AGENT_PORT,
+                                isOnline = true,
+                                lastSeen = System.currentTimeMillis()
+                            )
+                         )
+                    }
+                } catch (e: SocketTimeoutException) {
+                    break
+                }
+            }
+            socket.close()
         } catch (e: Exception) {
             Log.e(TAG, "Error in SSDP discovery", e)
-            emptyList()
         }
+        discoveredPCs
     }
 
     /**
-     * Discover PCs using mDNS.
+     * Discover PCs using mDNS (NSD).
      */
     private suspend fun discoverByMDNS(): List<DiscoveredPC> {
         return try {
             Log.d(TAG, "Starting mDNS discovery")
+            
+            val discoveredServices = mutableListOf<DiscoveredPC>()
+            val nsdManager = context.getSystemService(Context.NSD_SERVICE) as android.net.nsd.NsdManager
+            val serviceType = "_pc-control._tcp."
+            
+            val discoveryListener = object : android.net.nsd.NsdManager.DiscoveryListener {
+                override fun onDiscoveryStarted(regType: String) {
+                    Log.d(TAG, "Service discovery started")
+                }
 
-            // mDNS would resolve .local services
-            // For MVP, this is a placeholder implementation
-            delay(1000)
+                override fun onServiceFound(service: android.net.nsd.NsdServiceInfo) {
+                    Log.d(TAG, "Service discovery success: $service")
+                    if (service.serviceType == serviceType) {
+                        nsdManager.resolveService(service, object : android.net.nsd.NsdManager.ResolveListener {
+                            override fun onResolveFailed(serviceInfo: android.net.nsd.NsdServiceInfo, errorCode: Int) {
+                                Log.e(TAG, "Resolve failed: $errorCode")
+                            }
 
-            emptyList() // Would return discovered PCs in real implementation
+                            override fun onServiceResolved(serviceInfo: android.net.nsd.NsdServiceInfo) {
+                                Log.d(TAG, "Resolve Succeeded. $serviceInfo")
+                                val host = serviceInfo.host
+                                val ip = host.hostAddress
+                                val name = serviceInfo.serviceName
+                                
+                                if (ip != null) {
+                                    synchronized(discoveredServices) {
+                                        discoveredServices.add(
+                                            DiscoveredPC(
+                                                id = "pc_${ip.replace(".", "_")}",
+                                                name = name,
+                                                ipAddress = ip
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
 
+                override fun onServiceLost(service: android.net.nsd.NsdServiceInfo) {
+                    Log.e(TAG, "service lost: $service")
+                }
+
+                override fun onDiscoveryStopped(serviceType: String) {
+                    Log.i(TAG, "Discovery stopped: $serviceType")
+                }
+
+                override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+                    Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                    nsdManager.stopServiceDiscovery(this)
+                }
+
+                override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
+                    Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                    nsdManager.stopServiceDiscovery(this)
+                }
+            }
+
+            nsdManager.discoverServices(serviceType, android.net.nsd.NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+            
+            // Wait for discovery
+            delay(3000)
+            
+            try {
+                nsdManager.stopServiceDiscovery(discoveryListener)
+            } catch (e: Exception) {
+                // Ignore if already stopped
+            }
+
+            discoveredServices
         } catch (e: Exception) {
             Log.e(TAG, "Error in mDNS discovery", e)
             emptyList()

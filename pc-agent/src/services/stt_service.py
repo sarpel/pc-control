@@ -476,9 +476,39 @@ class WhisperService:
 
     async def _download_model(self):
         """Download Whisper model if not available."""
-        logger.warning("Model download not implemented. Please download model manually.")
-        # In a real implementation, this would download the model from a URL
-        # For now, we expect the model to be pre-downloaded
+        try:
+            logger.info(f"Downloading Whisper model to {self.model_path}...")
+            
+            # Ensure directory exists
+            self.model_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Use huggingface_hub to download the model
+            # We download the ggml model file for whisper.cpp
+            from huggingface_hub import hf_hub_download
+            
+            # Map model size to file name
+            # Using ggml-base.bin as default for base model
+            model_filename = f"ggml-{self.model_size}.bin"
+            
+            hf_hub_download(
+                repo_id="ggerganov/whisper.cpp",
+                filename=model_filename,
+                local_dir=str(self.model_path.parent),
+                local_dir_use_symlinks=False
+            )
+            
+            # Rename if necessary to match expected path
+            downloaded_file = self.model_path.parent / model_filename
+            if downloaded_file != self.model_path and downloaded_file.exists():
+                if self.model_path.exists():
+                    self.model_path.unlink()
+                downloaded_file.rename(self.model_path)
+                
+            logger.info("Model download completed successfully.")
+            
+        except Exception as e:
+            logger.error(f"Failed to download model: {e}")
+            raise
 
     def _get_turkish_error_message(self, error: Exception) -> str:
         """Convert error to Turkish error message."""

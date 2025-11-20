@@ -66,13 +66,14 @@ class CertificateService:
     - Client certificate management
     """
 
-    def __init__(self):
+    def __init__(self, cert_dir: Optional[Path] = None):
         """Initialize certificate service."""
         self.settings = get_settings()
-        self.ca_cert_path = Path(self.settings.certificates_dir) / "ca.crt"
-        self.server_cert_path = Path(self.settings.certificates_dir) / "server.crt"
-        self.client_certs_dir = Path(self.settings.certificates_dir) / "clients"
-        self.client_certs_dir.mkdir(exist_ok=True)
+        base_dir = cert_dir if cert_dir else Path(self.settings.certificates_dir)
+        self.ca_cert_path = base_dir / "ca.crt"
+        self.server_cert_path = base_dir / "server.crt"
+        self.client_certs_dir = base_dir / "clients"
+        self.client_certs_dir.mkdir(parents=True, exist_ok=True)
 
     def load_certificate(self, cert_path: Path) -> Optional[x509.Certificate]:
         """
@@ -528,3 +529,49 @@ class CertificateService:
             logger.error(f"Failed to cleanup expired certificates: {e}")
 
         return removed_count
+
+    async def generate_client_certificate(self, common_name: str, device_id: str) -> Dict[str, str]:
+        """
+        Generate client certificate for a device.
+
+        Args:
+            common_name: Common name for the certificate
+            device_id: Device identifier
+
+        Returns:
+            Dictionary with CA cert, client cert, and private key (PEM format)
+        """
+        from utils.certificate_generator import CertificateGenerator
+        
+        # Ensure CA exists (generate if needed, mostly for tests)
+        ca_key_path = self.ca_cert_path.parent / "ca.key"
+        
+        if not self.ca_cert_path.exists() or not ca_key_path.exists():
+            generator = CertificateGenerator(self.ca_cert_path.parent)
+            ca_key, ca_cert = generator.generate_ca_certificate()
+            
+            with open(self.ca_cert_path, "wb") as f:
+                f.write(ca_cert)
+            with open(ca_key_path, "wb") as f:
+                f.write(ca_key)
+        
+        # Read CA cert and key
+        with open(self.ca_cert_path, "rb") as f:
+            ca_cert_pem = f.read()
+            
+        with open(ca_key_path, "rb") as f:
+            ca_key_pem = f.read()
+            
+        # Generate client certificate
+        generator = CertificateGenerator(self.ca_cert_path.parent)
+        client_key_pem, client_cert_pem = generator.generate_client_certificate(
+            ca_private_key=ca_key_pem,
+            ca_cert=ca_cert_pem,
+            device_name=common_name
+        )
+        
+        return {
+            "ca_certificate": ca_cert_pem.decode("utf-8"),
+            "client_certificate": client_cert_pem.decode("utf-8"),
+            "client_private_key": client_key_pem.decode("utf-8")
+        }

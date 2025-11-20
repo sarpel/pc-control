@@ -80,9 +80,19 @@ class PairingService:
 
     def _load_jwt_secret(self) -> str:
         """Load JWT secret from secure storage."""
-        # TODO: Load from Windows Credential Manager
-        # For MVP, generate a random secret (NOT PRODUCTION READY)
-        return secrets.token_urlsafe(32)
+        try:
+            import keyring
+            service_name = "pc-control-agent"
+            username = "jwt-secret"
+            
+            secret = keyring.get_password(service_name, username)
+            if not secret:
+                secret = secrets.token_urlsafe(32)
+                keyring.set_password(service_name, username, secret)
+            return secret
+        except Exception as e:
+            logger.warning(f"Failed to use keyring for JWT secret: {e}. Using temporary secret.")
+            return secrets.token_urlsafe(32)
 
     async def initiate_pairing(
         self,
@@ -200,6 +210,8 @@ class PairingService:
         # Create device pairing record
         device_pairing = DevicePairing(
             device_id=device_id,
+            pairing_id=pairing_id,
+            pairing_code=pairing_code,
             device_name=session.device_name,
             ca_certificate=certificates["ca_certificate"],
             client_certificate=certificates["client_certificate"],
@@ -404,7 +416,7 @@ class PairingService:
     async def _get_device_pairing(self, device_id: str) -> Optional[DevicePairing]:
         """Get device pairing from database."""
         # Query database
-        query = "SELECT * FROM device_pairings WHERE device_id = ?"
+        query = "SELECT * FROM device_pairing WHERE device_id = ?"
         row = await self.db.fetch_one(query, (device_id,))
 
         if not row:
@@ -415,13 +427,15 @@ class PairingService:
     async def _save_device_pairing(self, pairing: DevicePairing):
         """Save device pairing to database."""
         query = """
-            INSERT INTO device_pairings (
-                device_id, device_name, ca_certificate, client_certificate,
+            INSERT INTO device_pairing (
+                device_id, pairing_id, pairing_code, device_name, ca_certificate, client_certificate,
                 auth_token_hash, token_expires_at, paired_at, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         values = (
             pairing.device_id,
+            pairing.pairing_id,
+            pairing.pairing_code,
             pairing.device_name,
             pairing.ca_certificate,
             pairing.client_certificate,
@@ -436,7 +450,7 @@ class PairingService:
     async def _update_device_pairing(self, pairing: DevicePairing):
         """Update device pairing in database."""
         query = """
-            UPDATE device_pairings
+            UPDATE device_pairing
             SET status = ?, auth_token_hash = ?, token_expires_at = ?
             WHERE device_id = ?
         """
@@ -451,9 +465,9 @@ class PairingService:
 
     async def _count_paired_devices(self) -> int:
         """Count currently paired devices."""
-        query = "SELECT COUNT(*) FROM device_pairings WHERE status = ?"
+        query = "SELECT COUNT(*) as count FROM device_pairing WHERE status = ?"
         row = await self.db.fetch_one(query, (PairingStatus.ACTIVE.value,))
-        return row[0] if row else 0
+        return row['count'] if row else 0
 
     async def _cleanup_expired_session(self, pairing_id: str):
         """Clean up expired pairing session."""

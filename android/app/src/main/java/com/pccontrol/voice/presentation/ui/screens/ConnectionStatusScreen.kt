@@ -93,7 +93,7 @@ fun ConnectionStatusScreen(
 
                     DetailItem(
                         label = "Son Bağlantı",
-                        value = formatTimestamp(uiState.lastConnectedTime)
+                        value = if (uiState.lastConnectedTime > 0) formatTimestamp(uiState.lastConnectedTime) else "Hiç bağlanmadı"
                     )
 
                     DetailItem(

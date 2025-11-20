@@ -7,6 +7,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.pccontrol.voice.data.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.KeyStore
@@ -255,20 +256,33 @@ class CredentialCleanupService private constructor(
     /**
      * Clean up sensitive data from Room database.
      */
-    private fun cleanupDatabaseCredentials(): CleanupDetail {
+    private suspend fun cleanupDatabaseCredentials(): CleanupDetail {
         val deleted = mutableListOf<String>()
         val errors = mutableListOf<String>()
 
         try {
-            // Note: Actual database cleanup should be done via repository
-            // This is a placeholder for coordination
+            val database = AppDatabase.getDatabase(context)
+            
+            // Clear PC connections (contains auth tokens)
+            database.pcConnectionDao().deleteAllConnections()
+            deleted.add("Device pairings and auth tokens")
 
-            // Clear device pairing data
-            deleted.add("Device pairings")
+            // Clear device pairings
+            database.devicePairingDao().deleteAllPairings()
+            deleted.add("Device pairing records")
 
-            // Clear auth tokens from connection records
-            deleted.add("Auth tokens")
+            // Clear voice commands (may contain sensitive transcripts)
+            // Using deleteExpiredCommands with a future timestamp to delete all
+            database.voiceCommandDao().deleteExpiredCommands(System.currentTimeMillis() + 1000000000L)
+            deleted.add("Voice command history")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cleaning database credentials", e)
+            errors.add("Database cleanup failed: ${e.message}")
+        }
 
+        return CleanupDetail(deleted.size, errors)
+    }
             Log.d(TAG, "Database credential cleanup completed")
         } catch (e: Exception) {
             errors.add("Database cleanup error: ${e.message}")

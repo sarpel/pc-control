@@ -266,13 +266,13 @@ private fun ShareContentDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // TODO: Implement actual share intent
-                    // val sendIntent = Intent().apply {
-                    //     action = Intent.ACTION_SEND
-                    //     putExtra(Intent.EXTRA_TEXT, content)
-                    //     type = "text/plain"
-                    // }
-                    // context.startActivity(Intent.createChooser(sendIntent, title))
+                    val sendIntent = android.content.Intent().apply {
+                        action = android.content.Intent.ACTION_SEND
+                        putExtra(android.content.Intent.EXTRA_TEXT, content)
+                        type = "text/plain"
+                    }
+                    val shareIntent = android.content.Intent.createChooser(sendIntent, title)
+                    context.startActivity(shareIntent)
                     onDismiss()
                 }
             ) {

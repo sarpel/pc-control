@@ -60,6 +60,11 @@ class ExecutionResult:
     execution_time_ms: Optional[float] = None
     data: Optional[Dict[str, Any]] = None
 
+    @property
+    def message(self) -> str:
+        """Return result message or error message."""
+        return self.result if self.success else (self.error or "Unknown error")
+
 
 class SystemController:
     """
@@ -115,6 +120,42 @@ class SystemController:
         """Detect operating system."""
         import platform
         return platform.system().lower()
+
+    async def launch_application(self, app_name: str, args: List[str] = None, working_directory: str = None) -> ExecutionResult:
+        """Public wrapper for launch application."""
+        return await self._launch_application({
+            "application": app_name,
+            "arguments": args or [],
+            "working_directory": working_directory
+        })
+
+    async def adjust_volume(self, level: int, relative: bool = False) -> ExecutionResult:
+        """Public wrapper for adjust volume."""
+        return await self._adjust_volume({
+            "level": level,
+            "relative": relative
+        })
+
+    async def find_files(self, query: str, locations: List[str] = None, max_results: int = 10) -> ExecutionResult:
+        """Public wrapper for find files."""
+        return await self._find_files({
+            "pattern": query,
+            "locations": locations,
+            "max_results": max_results
+        })
+
+    async def delete_file(self, path: str, confirmed: bool = False) -> ExecutionResult:
+        """Public wrapper for delete file."""
+        return await self._delete_file({
+            "path": path,
+            "force": confirmed
+        })
+
+    async def get_system_info(self, info_type: str = "basic") -> ExecutionResult:
+        """Public wrapper for get system info."""
+        return await self._query_system_info({
+            "info_type": info_type
+        })
 
     async def execute(self, command: SystemCommand) -> ExecutionResult:
         """
@@ -1208,6 +1249,18 @@ class SystemController:
         """
         return [op.value for op in OperationType]
 
+    def _is_admin(self) -> bool:
+        """Check if the process has admin privileges."""
+        try:
+            if self.os_type == "windows":
+                import ctypes
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            else:
+                import os
+                return os.geteuid() == 0
+        except Exception:
+            return False
+
     def health_check(self) -> Dict[str, Any]:
         """
         Perform health check on system controller.
@@ -1217,7 +1270,7 @@ class SystemController:
         """
         return {
             "os_type": self.os_type,
-            "admin_privileges": False,  # TODO: Implement admin check
+            "admin_privileges": self._is_admin(),
             "supported_operations": self.get_supported_operations(),
             "applications_mapped": len(self.applications),
             "temp_directory": str(self.temp_dir),
