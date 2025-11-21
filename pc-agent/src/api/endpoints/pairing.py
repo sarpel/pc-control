@@ -17,10 +17,10 @@ import hashlib
 import secrets
 import json
 
-from api.middleware import get_current_device, rate_limiter
-from services.certificate_service import CertificateService
-from services.connection_manager import ConnectionManager
-from database.connection import get_database_connection
+from src.api.middleware import get_current_device, rate_limiter
+from src.services.certificate_service import CertificateService
+from src.services.connection_manager import ConnectionManager
+from src.database.connection import get_database_connection
 
 logger = logging.getLogger(__name__)
 

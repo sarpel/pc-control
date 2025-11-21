@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
-from src.api.websocket_server import app
+from src.api.main import app
 from src.config.settings import get_settings, Settings
 
 
@@ -64,7 +64,8 @@ async def async_client(test_settings: Settings) -> AsyncGenerator[AsyncClient, N
     # Override settings for testing
     app.dependency_overrides[get_settings] = lambda: test_settings
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
     # Clean up
@@ -153,7 +154,7 @@ def mock_claude_response() -> dict:
 
 
 # Test markers for categorizing tests
-pytest_plugins = []
+
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""

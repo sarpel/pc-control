@@ -23,8 +23,8 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response, JSONResponse
 from starlette.types import ASGIApp
 
-from config.settings import get_settings
-from services.connection_manager import ConnectionManager
+from src.config.settings import get_settings
+from src.services.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -303,7 +303,7 @@ class SecurityHeadersMiddleware:
                     b"x-xss-protection": b"1; mode=block",
                     b"strict-transport-security": b"max-age=31536000; includeSubDomains",
                     b"referrer-policy": b"strict-origin-when-cross-origin",
-                    b"content-security-policy": b"default-src 'self'"
+                    b"content-security-policy": b"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
                 })
                 message["headers"] = [(k, v) for k, v in headers.items()]
             await send(message)

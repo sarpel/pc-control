@@ -16,10 +16,10 @@ from enum import Enum
 import uuid
 from datetime import datetime
 
-from services.browser_control import BrowserControlService, BrowserAction, ElementSelectorType
-from services.system_control import SystemControlService, SystemAction, FileType
-from services.connection_manager import ConnectionManager
-from database.connection import get_database_connection
+from src.services.browser_control import BrowserControlService, BrowserAction, ElementSelectorType
+from src.services.system_control import SystemControlService, SystemAction
+from src.services.connection_manager import ConnectionManager
+from src.database.connection import get_database_connection
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,10 @@ class CommandResult:
             self.suggestions = []
         if self.follow_up_actions is None:
             self.follow_up_actions = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return asdict(self)
 
 
 class VoiceCommandProcessor:

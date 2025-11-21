@@ -24,9 +24,9 @@ from dataclasses import dataclass
 import asyncio
 import jwt
 
-from models.device_pairing import DevicePairing, PairingStatus
-from services.certificate_service import CertificateService
-from database.connection import Database
+from src.models.device_pairing import DevicePairing, PairingStatus
+from src.services.certificate_service import CertificateService
+from src.database.connection import Database
 
 logger = logging.getLogger(__name__)
 
@@ -429,9 +429,10 @@ class PairingService:
         query = """
             INSERT INTO device_pairing (
                 device_id, pairing_id, pairing_code, device_name, ca_certificate, client_certificate,
-                auth_token_hash, token_expires_at, paired_at, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                auth_token_hash, token_expires_at, paired_at, status, created_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
+        now = datetime.utcnow()
         values = (
             pairing.device_id,
             pairing.pairing_id,
@@ -442,7 +443,9 @@ class PairingService:
             pairing.auth_token_hash,
             pairing.token_expires_at,
             pairing.paired_at,
-            pairing.status.value
+            pairing.status.value,
+            now,
+            now + timedelta(minutes=10) # expires_at is required by schema
         )
 
         await self.db.execute(query, values)

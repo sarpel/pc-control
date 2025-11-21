@@ -294,7 +294,6 @@ async def async_client():
     Note: This will be properly configured in conftest.py
     For now, this is a placeholder that will fail until implementation.
     """
-    from fastapi.testclient import TestClient
     from src.api.main import app
 
     async with AsyncClient(app=app, base_url="http://test") as client:

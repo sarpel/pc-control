@@ -580,4 +580,3 @@ class VoiceAssistantService : Service() {
     fun isRunning(): Boolean = isRunning
     fun isListening(): Boolean = isListening
 }
-}

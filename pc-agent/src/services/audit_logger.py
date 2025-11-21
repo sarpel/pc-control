@@ -14,7 +14,7 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, asdict
 from contextlib import contextmanager
 
@@ -203,7 +203,7 @@ class AuditLogger:
                     event_dict.get('user_id'),
                     event_dict.get('device_id'),
                     event_dict.get('ip_address'),
-                    event_dict.get('details'),
+                    json.dumps(event_dict.get('details')) if isinstance(event_dict.get('details'), dict) else event_dict.get('details'),
                     event_dict.get('command_id'),
                     event_dict.get('action_type'),
                     1 if event_dict['success'] else 0

@@ -36,7 +36,7 @@ async def test_browser_navigate_flow(browser_controller: BrowserControlService):
         action_id=str(uuid.uuid4()),
         command_id=str(uuid.uuid4()),
         status=ActionStatus.PENDING,
-        action_type=ActionType.BROWSER,
+        action_type=ActionType.BROWSER_NAVIGATE,
         parameters={"url": url, "wait_until": "load"}
     )
 
@@ -57,7 +57,7 @@ async def test_browser_search_flow(browser_controller: BrowserControlService):
         action_id=str(uuid.uuid4()),
         command_id=str(uuid.uuid4()),
         status=ActionStatus.PENDING,
-        action_type=ActionType.BROWSER,
+        action_type=ActionType.BROWSER_SEARCH,
         parameters={"query": query, "search_engine": "google"}
     )
 
@@ -81,7 +81,7 @@ async def test_page_content_extraction(browser_controller: BrowserControlService
         action_id=str(uuid.uuid4()),
         command_id=str(uuid.uuid4()),
         status=ActionStatus.PENDING,
-        action_type=ActionType.BROWSER,
+        action_type=ActionType.BROWSER_NAVIGATE,
         parameters={"url": url}
     )
     await browser_controller.execute_action(navigate_action)
@@ -91,7 +91,7 @@ async def test_page_content_extraction(browser_controller: BrowserControlService
         action_id=str(uuid.uuid4()),
         command_id=str(uuid.uuid4()),
         status=ActionStatus.PENDING,
-        action_type=ActionType.BROWSER,
+        action_type=ActionType.BROWSER_EXTRACT,
         parameters={"extract_type": "text"}
     )
 

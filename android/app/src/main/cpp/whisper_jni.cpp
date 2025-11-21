@@ -61,6 +61,11 @@ Java_com_pccontrol_voice_audio_SpeechToTextService_00024WhisperModel_fullTranscr
     jsize len = env->GetArrayLength(audioData);
     jfloat *samples = env->GetFloatArrayElements(audioData, nullptr);
     
+    if (samples == nullptr) {
+        LOGE("Failed to get audio data elements from JNI");
+        return env->NewStringUTF("");
+    }
+    
     // 0 = WHISPER_SAMPLING_GREEDY
     struct whisper_full_params params = whisper_full_default_params(0); 
     params.print_progress = false;
@@ -69,7 +74,7 @@ Java_com_pccontrol_voice_audio_SpeechToTextService_00024WhisperModel_fullTranscr
     
     if (whisper_full(ctx, params, samples, len) != 0) {
         LOGE("Whisper full transcription failed");
-        env->ReleaseFloatArrayElements(audioData, samples, 0);
+        env->ReleaseFloatArrayElements(audioData, samples, JNI_ABORT);
         return env->NewStringUTF("");
     }
     
@@ -80,7 +85,7 @@ Java_com_pccontrol_voice_audio_SpeechToTextService_00024WhisperModel_fullTranscr
         result += text;
     }
     
-    env->ReleaseFloatArrayElements(audioData, samples, 0);
+    env->ReleaseFloatArrayElements(audioData, samples, JNI_ABORT);
     
     return env->NewStringUTF(result.c_str());
 }

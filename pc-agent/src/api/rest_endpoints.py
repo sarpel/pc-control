@@ -21,10 +21,10 @@ from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, Any
 import logging
 
-from services.pairing_service import PairingService
-from services.audit_log_service import AuditLogService
-from services.wol_service import WakeOnLANService
-from database.connection import Database
+from src.services.pairing_service import PairingService
+from src.services.audit_log_service import AuditLogService
+from src.services.wol_service import WakeOnLANService
+from src.database.connection import Database
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ pairing_router = APIRouter(prefix="/api/pairing", tags=["pairing"])
 wol_router = APIRouter(prefix="/api/wol", tags=["wake-on-lan"])
 
 # Global service instances
-from database.connection import get_database_connection
-from services.certificate_service import CertificateService
+from src.database.connection import get_database_connection
+from src.services.certificate_service import CertificateService
 
 _db = get_database_connection()
 _cert_service = CertificateService()

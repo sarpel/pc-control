@@ -10,14 +10,14 @@ from fastapi import status
 
 
 @pytest.mark.asyncio
-async def test_browser_navigate_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_navigate_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/browser/navigate endpoint."""
     payload = {
         "url": "https://www.example.com",
         "wait_until": "load"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/navigate",
         json=payload,
         headers=authenticated_headers
@@ -31,14 +31,14 @@ async def test_browser_navigate_endpoint(client: AsyncClient, authenticated_head
 
 
 @pytest.mark.asyncio
-async def test_browser_search_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_search_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/browser/search endpoint."""
     payload = {
         "query": "Python programming",
         "search_engine": "google"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/search",
         json=payload,
         headers=authenticated_headers
@@ -52,14 +52,14 @@ async def test_browser_search_endpoint(client: AsyncClient, authenticated_header
 
 
 @pytest.mark.asyncio
-async def test_browser_extract_content_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_extract_content_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/browser/extract endpoint."""
     payload = {
         "url": "https://www.example.com",
         "extract_type": "text"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/extract",
         json=payload,
         headers=authenticated_headers
@@ -73,14 +73,14 @@ async def test_browser_extract_content_endpoint(client: AsyncClient, authenticat
 
 
 @pytest.mark.asyncio
-async def test_browser_navigate_invalid_url(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_navigate_invalid_url(async_client: AsyncClient, authenticated_headers: dict):
     """Test navigation with invalid URL returns 400."""
     payload = {
         "url": "not-a-valid-url",
         "wait_until": "load"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/navigate",
         json=payload,
         headers=authenticated_headers
@@ -93,14 +93,14 @@ async def test_browser_navigate_invalid_url(client: AsyncClient, authenticated_h
 
 
 @pytest.mark.asyncio
-async def test_browser_navigate_unauthorized(client: AsyncClient):
+async def test_browser_navigate_unauthorized(async_client: AsyncClient):
     """Test navigation without authentication returns 401."""
     payload = {
         "url": "https://www.example.com",
         "wait_until": "load"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/navigate",
         json=payload
     )
@@ -109,14 +109,14 @@ async def test_browser_navigate_unauthorized(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_browser_search_empty_query(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_search_empty_query(async_client: AsyncClient, authenticated_headers: dict):
     """Test search with empty query returns 400."""
     payload = {
         "query": "",
         "search_engine": "google"
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/search",
         json=payload,
         headers=authenticated_headers
@@ -126,7 +126,7 @@ async def test_browser_search_empty_query(client: AsyncClient, authenticated_hea
 
 
 @pytest.mark.asyncio
-async def test_browser_extract_timeout(client: AsyncClient, authenticated_headers: dict):
+async def test_browser_extract_timeout(async_client: AsyncClient, authenticated_headers: dict):
     """Test content extraction with timeout."""
     payload = {
         "url": "https://httpstat.us/200?sleep=35000",  # 35 second delay
@@ -134,7 +134,7 @@ async def test_browser_extract_timeout(client: AsyncClient, authenticated_header
         "timeout": 1  # 1 second timeout
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/browser/extract",
         json=payload,
         headers=authenticated_headers

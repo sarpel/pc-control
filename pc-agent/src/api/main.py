@@ -12,18 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from api.middleware import (
+from src.api.middleware import (
     setup_middleware,
     rate_limiter,
     logging_middleware,
     error_handler_middleware
 )
-from api.rest_endpoints import pairing_router, wol_router
-from api.websocket_server import router as websocket_router
-from database.connection import initialize_database, close_database
-from services.certificate_service import CertificateService
-from services.connection_manager import ConnectionManager
-from config.settings import get_settings
+from src.api.rest_endpoints import pairing_router, wol_router
+from src.api.websocket_server import router as websocket_router
+from src.database.connection import initialize_database, close_database
+from src.services.certificate_service import CertificateService
+from src.services.connection_manager import ConnectionManager
+from src.config.settings import get_settings
 
 # Configure logging
 logging.basicConfig(

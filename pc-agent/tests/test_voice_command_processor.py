@@ -247,8 +247,8 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         ]
 
         expected_outputs = [
-            "chrome'u aç",
-            "google'da ara",
+            "chrome u aç",
+            "google da ara",
             "ses seviyesi 70",
             "web sitesine git"
         ]

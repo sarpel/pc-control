@@ -25,12 +25,21 @@ from src.services.audit_logger import (
 @pytest.fixture
 def temp_db():
     """Create a temporary database for testing"""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.db') as f:
-        db_path = f.name
+    # Use a file that can be closed properly
+    fd, db_path = tempfile.mkstemp(suffix='.db')
+    os.close(fd)
+    
     yield db_path
-    # Cleanup
+    
+    # Cleanup with retry logic for Windows file locking
     if os.path.exists(db_path):
-        os.unlink(db_path)
+        for _ in range(3):
+            try:
+                os.unlink(db_path)
+                break
+            except PermissionError:
+                import time
+                time.sleep(0.1)
 
 
 @pytest.fixture
