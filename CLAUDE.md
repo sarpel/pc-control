@@ -76,7 +76,7 @@ mypy src/
 
 # Format
 ruff format .
-# Note: black is also available but redundant with ruff format
+# Note: black is redundant with ruff format
 ```
 
 ### Android
@@ -111,7 +111,7 @@ make clean          # Clean build artifacts
 
 ### Python
 - **Line length**: 100 characters
-- **Formatter**: Ruff (Black is also configured but redundant)
+- **Formatter**: Ruff (use only Ruff; Black is also configured but should not be used)
 - **Linter**: Ruff (pycodestyle, pyflakes, flake8-bugbear, etc.)
 - **Type checker**: mypy (strict mode)
 - **Type hints**: Required for all functions
