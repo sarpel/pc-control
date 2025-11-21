@@ -167,6 +167,23 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Audit Logs Table
+-- Stores security audit logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME NOT NULL,
+    event_type TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    user_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    details TEXT,                      -- JSON string of event details
+    severity TEXT NOT NULL DEFAULT 'info',
+    security_related BOOLEAN DEFAULT 0,
+    session_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Performance Metrics Table
 -- Stores performance and usage metrics
 CREATE TABLE IF NOT EXISTS performance_metrics (

@@ -58,8 +58,9 @@ async def test_delete_file_endpoint(async_client: AsyncClient, authenticated_hea
         "confirmed": True
     }
 
-    response = await async_client.delete(
-        "/api/v1/system/file",
+    response = await async_client.request(
+        "DELETE",
+        "/api/v1/system/files",
         json=payload,
         headers=authenticated_headers
     )
@@ -76,15 +77,18 @@ async def test_delete_file_requires_confirmation(async_client: AsyncClient, auth
         "confirmed": False
     }
 
-    response = await async_client.delete(
-        "/api/v1/system/file",
+    response = await async_client.request(
+        "DELETE",
+        "/api/v1/system/files",
         json=payload,
         headers=authenticated_headers
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     data = response.json()
-    assert "confirmation" in data["error"].lower()
+    # Check message in structured error response
+    error_msg = data["error"]["message"] if "message" in data["error"] else str(data["error"])
+    assert "confirmation" in error_msg.lower()
 
 
 @pytest.mark.asyncio

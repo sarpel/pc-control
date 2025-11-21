@@ -32,20 +32,37 @@ def temp_db():
     yield db_path
     
     # Cleanup with retry logic for Windows file locking
+    import time
+    import gc
+    
+    # Force garbage collection
+    gc.collect()
+    
     if os.path.exists(db_path):
-        for _ in range(3):
+        for i in range(5):
             try:
                 os.unlink(db_path)
                 break
             except PermissionError:
-                import time
-                time.sleep(0.1)
+                time.sleep(0.2)
+        else:
+            print(f"Warning: Could not delete temp db {db_path}")
 
 
 @pytest.fixture
 def audit_logger(temp_db):
     """Create an AuditLogger instance with temporary database"""
-    return AuditLogger(db_path=temp_db)
+    logger = AuditLogger(db_path=temp_db)
+    yield logger
+    # Close connection if method exists
+    if hasattr(logger, 'close'):
+        logger.close()
+    elif hasattr(logger, 'db') and hasattr(logger.db, 'close'):
+        # If it has a db attribute with close method
+        try:
+            logger.db.close()
+        except:
+            pass
 
 
 class TestAuditEvent:

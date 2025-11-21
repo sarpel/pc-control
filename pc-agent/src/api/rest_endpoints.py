@@ -36,11 +36,7 @@ wol_router = APIRouter(prefix="/api/wol", tags=["wake-on-lan"])
 from src.database.connection import get_database_connection
 from src.services.certificate_service import CertificateService
 
-_db = get_database_connection()
-_cert_service = CertificateService()
 wol_service = WakeOnLANService()
-pairing_service_instance = PairingService(_db, _cert_service)
-audit_service_instance = AuditLogService(_db)
 
 
 # Request/Response Models
@@ -100,7 +96,7 @@ class PairingVerifyResponse(BaseModel):
 
 class PairingStatusResponse(BaseModel):
     """Response model for pairing status."""
-    status: str
+    pairing_status: str
     device_name: str
     device_id: str
     paired_at: Optional[str]
@@ -163,14 +159,13 @@ class WoLHealthResponse(BaseModel):
 
 
 # Dependency injection
-async def get_pairing_service(db: Database) -> PairingService:
+def get_pairing_service(db: Database = Depends(get_database_connection)) -> PairingService:
     """Get pairing service instance."""
-    from services.certificate_service import CertificateService
     cert_service = CertificateService()
     return PairingService(db, cert_service)
 
 
-async def get_audit_service(db: Database) -> AuditLogService:
+def get_audit_service(db: Database = Depends(get_database_connection)) -> AuditLogService:
     """Get audit log service instance."""
     return AuditLogService(db)
 
@@ -185,8 +180,8 @@ async def get_audit_service(db: Database) -> AuditLogService:
 )
 async def initiate_pairing(
     request: PairingInitiateRequest,
-    # Removed unused param - using pairing_service_instance
-    # Removed unused param - using audit_service_instance
+    pairing_service: PairingService = Depends(get_pairing_service),
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Initiate pairing process for an Android device.
@@ -196,13 +191,13 @@ async def initiate_pairing(
     """
     try:
         # Initiate pairing
-        result = await pairing_service_instance.initiate_pairing(
+        result = await pairing_service.initiate_pairing(
             device_name=request.device_name,
             device_id=request.device_id
         )
 
         # Log audit event
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_initiated",
             device_id=request.device_id,
             details={
@@ -219,7 +214,7 @@ async def initiate_pairing(
 
     except ValueError as e:
         # Log failed attempt
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_initiate_failed",
             device_id=request.device_id,
             details={
@@ -262,8 +257,8 @@ async def initiate_pairing(
 )
 async def verify_pairing(
     request: PairingVerifyRequest,
-    # Removed unused param - using pairing_service_instance
-    # Removed unused param - using audit_service_instance
+    pairing_service: PairingService = Depends(get_pairing_service),
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Verify pairing code and complete device pairing.
@@ -273,14 +268,14 @@ async def verify_pairing(
     """
     try:
         # Verify pairing
-        result = await pairing_service_instance.verify_pairing(
+        result = await pairing_service.verify_pairing(
             pairing_id=request.pairing_id,
             pairing_code=request.pairing_code,
             device_id=request.device_id
         )
 
         # Log successful verification
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_verified",
             device_id=request.device_id,
             details={
@@ -296,7 +291,7 @@ async def verify_pairing(
 
     except ValueError as e:
         # Log failed verification
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_verification_failed",
             device_id=request.device_id,
             details={
@@ -313,7 +308,7 @@ async def verify_pairing(
 
     except PermissionError as e:
         # Log invalid code attempt
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_verification_failed",
             device_id=request.device_id,
             details={
@@ -346,8 +341,8 @@ async def verify_pairing(
 )
 async def get_pairing_status(
     device_id: str,
-    # Removed unused param - using pairing_service_instance
-    # Removed unused param - using audit_service_instance
+    pairing_service: PairingService = Depends(get_pairing_service),
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Get pairing status for a specific device.
@@ -356,14 +351,18 @@ async def get_pairing_status(
         Current pairing status and device information
     """
     try:
-        result = await pairing_service_instance.get_pairing_status(device_id)
+        result = await pairing_service.get_pairing_status(device_id)
+
+        # Map status to pairing_status for response model
+        if "status" in result:
+            result["pairing_status"] = result.pop("status")
 
         # Log status check (lower severity)
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_status_checked",
             device_id=device_id,
             details={
-                "status": result["status"],
+                "status": result.get("pairing_status"),
                 "ip_address": "client_ip"
             },
             severity="info"
@@ -393,8 +392,8 @@ async def get_pairing_status(
 )
 async def revoke_pairing(
     device_id: str,
-    # Removed unused param - using pairing_service_instance
-    # Removed unused param - using audit_service_instance
+    pairing_service: PairingService = Depends(get_pairing_service),
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Revoke pairing for a device.
@@ -407,13 +406,13 @@ async def revoke_pairing(
     """
     try:
         # Get device info before revoking for logging
-        device_info = await pairing_service_instance.get_pairing_status(device_id)
+        device_info = await pairing_service.get_pairing_status(device_id)
 
         # Revoke pairing
-        await pairing_service_instance.revoke_pairing(device_id)
+        await pairing_service.revoke_pairing(device_id)
 
         # Log revocation
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pairing_revoked",
             device_id=device_id,
             details={
@@ -450,8 +449,8 @@ async def revoke_pairing(
 )
 async def rotate_auth_token(
     device_id: str,
-    # Removed unused param - using pairing_service_instance
-    # Removed unused param - using audit_service_instance
+    pairing_service: PairingService = Depends(get_pairing_service),
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Rotate authentication token for a device.
@@ -460,10 +459,10 @@ async def rotate_auth_token(
         New auth token and expiration
     """
     try:
-        result = await pairing_service_instance.rotate_auth_token(device_id)
+        result = await pairing_service.rotate_auth_token(device_id)
 
         # Log token rotation
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="auth_token_rotated",
             device_id=device_id,
             details={
@@ -499,7 +498,8 @@ async def rotate_auth_token(
     description="Send Wake-on-LAN magic packet to wake a sleeping PC."
 )
 async def send_wol_packet(
-    request: WoLSendRequest
+    request: WoLSendRequest,
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Send Wake-on-LAN magic packet to specified MAC and IP addresses.
@@ -519,7 +519,7 @@ async def send_wol_packet(
         )
 
         # Log WoL attempt
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_packet_sent",
             device_id="unknown",  # WoL doesn't require device authentication
             details={
@@ -549,7 +549,7 @@ async def send_wol_packet(
 
     except ValueError as e:
         # Log validation error
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_validation_failed",
             device_id="unknown",
             details={
@@ -568,7 +568,7 @@ async def send_wol_packet(
 
     except OSError as e:
         # Log permission or network error
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_permission_error",
             device_id="unknown",
             details={
@@ -590,7 +590,7 @@ async def send_wol_packet(
         logger.error(f"Unexpected error in send_wol_packet: {e}", exc_info=True)
 
         # Log unexpected error
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_unexpected_error",
             device_id="unknown",
             details={
@@ -617,7 +617,7 @@ async def send_wol_packet(
 )
 async def check_pc_wake_status(
     ip: str,
-    # Removed unused param - using audit_service_instance
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Check the wake status of a PC.
@@ -639,7 +639,7 @@ async def check_pc_wake_status(
         result = await wol_service.check_pc_status(ip.strip())
 
         # Log status check
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pc_status_checked",
             device_id="unknown",
             details={
@@ -669,7 +669,7 @@ async def check_pc_wake_status(
         logger.error(f"Unexpected error in check_pc_wake_status: {e}", exc_info=True)
 
         # Log unexpected error
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="pc_status_check_error",
             device_id="unknown",
             details={
@@ -694,7 +694,7 @@ async def check_pc_wake_status(
     description="Check if Wake-on-LAN service is healthy and has required capabilities."
 )
 async def wol_health_check(
-    # Removed unused param - using audit_service_instance
+    audit_service: AuditLogService = Depends(get_audit_service)
 ):
     """
     Check the health and capabilities of the Wake-on-LAN service.
@@ -707,7 +707,7 @@ async def wol_health_check(
         result = await wol_service.get_service_health()
 
         # Log health check (lower severity to avoid noise)
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_health_checked",
             device_id="system",
             details={
@@ -731,7 +731,7 @@ async def wol_health_check(
         logger.error(f"Unexpected error in wol_health_check: {e}", exc_info=True)
 
         # Log health check failure
-        await audit_service_instance.log_event(
+        await audit_service.log_event(
             event_type="wol_health_check_error",
             device_id="system",
             details={

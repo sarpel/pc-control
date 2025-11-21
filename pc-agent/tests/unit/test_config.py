@@ -22,7 +22,8 @@ class TestSettings:
         """Test that default settings are applied correctly."""
         # Clear environment variables that might interfere
         with patch.dict(os.environ, {}, clear=True):
-            settings = Settings()
+            # Pass _env_file=None to ignore .env file
+            settings = Settings(_env_file=None)
 
             assert settings.host == "0.0.0.0"
             assert settings.port == 8765
@@ -66,10 +67,15 @@ PC_AGENT_USE_SSL=false
         """Test SSL certificate path configuration."""
         with tempfile.TemporaryDirectory() as temp_dir:
             cert_dir = Path(temp_dir)
+            
+            # Create dummy cert files
+            (cert_dir / "server.crt").touch()
+            (cert_dir / "server.key").touch()
 
             settings = Settings(
                 use_ssl=True,
-                certificates_dir=str(cert_dir)
+                cert_file=str(cert_dir / "server.crt"),
+                key_file=str(cert_dir / "server.key")
             )
 
             assert Path(settings.cert_file).resolve() == (cert_dir / "server.crt").resolve()

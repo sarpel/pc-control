@@ -32,13 +32,14 @@ class TestWolServiceContract:
         if PCConnection is None:
             pytest.skip("PCConnection not yet implemented")
         
-        return PCConnection(
+        conn = PCConnection(
             connection_id=uuid.uuid4(),
             pc_ip_address="192.168.1.100",
             pc_mac_address="AA:BB:CC:DD:EE:FF",
             pc_name="Test-PC",
             connection_status="disconnected"
         )
+        yield conn
     
     @pytest.fixture
     def wol_service(self):
@@ -46,7 +47,8 @@ class TestWolServiceContract:
         if WolService is None:
             pytest.skip("WolService not yet implemented")
         
-        return WolService()
+        service = WolService()
+        yield service
     
     async def test_wake_pc_success(self, wol_service, mock_pc_connection):
         """Test successful PC wake operation."""

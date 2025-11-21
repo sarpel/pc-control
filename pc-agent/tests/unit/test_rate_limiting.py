@@ -126,17 +126,19 @@ class MockRateLimitMiddleware:
 @pytest.fixture
 def rate_limiter():
     """Fixture for rate limiter."""
-    return MockRateLimitMiddleware()
+    limiter = MockRateLimitMiddleware()
+    yield limiter
 
 
 @pytest.fixture
 def strict_rate_limiter():
     """Fixture for strict rate limiter."""
-    return MockRateLimitMiddleware(
+    limiter = MockRateLimitMiddleware(
         max_connection_attempts=3,
         connection_window_seconds=30,
         max_backoff_seconds=60
     )
+    yield limiter
 
 
 class TestConnectionAttemptLimiting:

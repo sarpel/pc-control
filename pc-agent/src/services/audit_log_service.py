@@ -118,12 +118,16 @@ class AuditLogService:
             security_related: Whether this is a security-relevant event
         """
         try:
+            # Handle Enum or string for event_type and severity
+            event_type_val = event_type.value if hasattr(event_type, 'value') else str(event_type)
+            severity_val = severity.value if hasattr(severity, 'value') else str(severity)
+
             # Create log entry
             entry = AuditLogEntry(
-                event_type=event_type.value,
+                event_type=event_type_val,
                 device_id=device_id,
                 details=details or {},
-                severity=severity.value,
+                severity=severity_val,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 user_id=user_id,

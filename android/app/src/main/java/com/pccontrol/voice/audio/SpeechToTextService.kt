@@ -1,10 +1,12 @@
 package com.pccontrol.voice.audio
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
 import java.io.*
+import java.net.URL
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -250,7 +252,7 @@ class SpeechToTextService private constructor(
                     readTimeout = 30_000     // 30 seconds to read data
                 }
                 // Note: getInputStream() implicitly calls connect()
-                
+
                 BufferedInputStream(connection.getInputStream()).use { input ->
                     FileOutputStream(modelFile).use { output ->
                         // 8KB buffer for efficient large file downloads (model is ~75MB)
@@ -428,16 +430,16 @@ class SpeechToTextService private constructor(
             if (contextPtr == 0L) {
                 return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
             }
-            
+
             return try {
                 val audioFile = File(audioPath)
                 if (!audioFile.exists()) {
                     return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
                 }
-                
+
                 val audioData = readAudioFileToFloatArray(audioFile)
                 val text = fullTranscribe(contextPtr, audioData)
-                
+
                 // Parse result if it's JSON or structured, otherwise assume plain text
                 // For now assuming plain text return from JNI
                 WhisperTranscriptionResult(text, 1.0f, language, (audioData.size / 16000.0 * 1000).toLong(), emptyList())
@@ -454,7 +456,7 @@ class SpeechToTextService private constructor(
             val startOffset = if (file.name.endsWith(".wav", ignoreCase = true) && bytes.size > 44) 44 else 0
             val shortCount = (bytes.size - startOffset) / 2
             val floatArray = FloatArray(shortCount)
-            
+
             for (i in 0 until shortCount) {
                 val byteIndex = startOffset + i * 2
                 if (byteIndex + 1 < bytes.size) {

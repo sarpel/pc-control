@@ -18,13 +18,9 @@ import zlib
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from collections import deque
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, FastAPI
-
-# Create FastAPI app instance if running as module
-app = FastAPI()
-router = APIRouter()
-app.include_router(router)
 
 from src.config.settings import get_settings
 from src.services.connection_manager import ConnectionManager
@@ -279,6 +275,29 @@ settings = get_settings()
 connection_manager = ConnectionManager()
 voice_processor = VoiceCommandProcessor()
 active_handlers: Dict[str, OptimizedWebSocketHandler] = {}
+
+
+@asynccontextmanager
+async def websocket_lifespan(app: FastAPI):
+    """Lifespan context manager for WebSocket server."""
+    # Startup
+    logger.info("PC Control Agent WebSocket Server starting up")
+    logger.info(f"Max concurrent connections: {settings.max_concurrent_connections}")
+    logger.info(f"Command timeout: {settings.command_timeout}s")
+    
+    yield
+    
+    # Shutdown
+    logger.info("PC Control Agent WebSocket Server shutting down")
+    await connection_manager.shutdown()
+
+
+# Create router with lifespan
+router = APIRouter(lifespan=websocket_lifespan)
+
+# Create FastAPI app instance if running as module
+app = FastAPI()
+app.include_router(router)
 
 
 @router.get("/")
@@ -651,21 +670,6 @@ async def send_error(websocket: WebSocket, error_message: str):
         )
     except Exception as e:
         logger.error(f"Error sending error message: {e}")
-
-
-@router.on_event("startup")
-async def startup_event():
-    """Handle application startup."""
-    logger.info("PC Control Agent WebSocket Server starting up")
-    logger.info(f"Max concurrent connections: {settings.max_concurrent_connections}")
-    logger.info(f"Command timeout: {settings.command_timeout}s")
-
-
-@router.on_event("shutdown")
-async def shutdown_event():
-    """Handle application shutdown."""
-    logger.info("PC Control Agent WebSocket Server shutting down")
-    await connection_manager.shutdown()
 
 
 async def handle_websocket_messages_optimized(handler: OptimizedWebSocketHandler, device_id: str):

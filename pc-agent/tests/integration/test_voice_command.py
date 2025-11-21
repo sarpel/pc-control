@@ -31,44 +31,51 @@ except ImportError:
     Action = None
 
 
+@pytest.fixture
+def audio_processor():
+    """Initialize audio processor service."""
+    if AudioProcessor is None:
+        pytest.skip("AudioProcessor not yet implemented")
+    processor = AudioProcessor()
+    yield processor
+
+@pytest.fixture
+def stt_service():
+    """Initialize speech-to-text service."""
+    if STTService is None:
+        pytest.skip("STTService not yet implemented")
+    service = STTService(model_name="base")
+    yield service
+
+@pytest.fixture
+def command_interpreter():
+    """Initialize command interpreter service."""
+    if CommandInterpreter is None:
+        pytest.skip("CommandInterpreter not yet implemented")
+    interpreter = CommandInterpreter()
+    yield interpreter
+
+@pytest.fixture
+def system_controller():
+    """Initialize system controller service."""
+    if SystemController is None:
+        pytest.skip("SystemController not yet implemented")
+    controller = SystemController()
+    yield controller
+
+@pytest.fixture
+def sample_audio_path():
+    """Path to sample audio file for testing."""
+    # This would be a real Turkish voice command: "Chrome'u aç"
+    path = Path("tests/fixtures/audio/chrome_ac.opus")
+    yield path
+    # No cleanup needed for static path
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 class TestVoiceCommandFlow:
     """Integration tests for end-to-end voice command processing."""
-    
-    @pytest.fixture
-    def audio_processor(self):
-        """Initialize audio processor service."""
-        if AudioProcessor is None:
-            pytest.skip("AudioProcessor not yet implemented")
-        return AudioProcessor()
-    
-    @pytest.fixture
-    def stt_service(self):
-        """Initialize speech-to-text service."""
-        if STTService is None:
-            pytest.skip("STTService not yet implemented")
-        return STTService(model_name="base")
-    
-    @pytest.fixture
-    def command_interpreter(self):
-        """Initialize command interpreter service."""
-        if CommandInterpreter is None:
-            pytest.skip("CommandInterpreter not yet implemented")
-        return CommandInterpreter()
-    
-    @pytest.fixture
-    def system_controller(self):
-        """Initialize system controller service."""
-        if SystemController is None:
-            pytest.skip("SystemController not yet implemented")
-        return SystemController()
-    
-    @pytest.fixture
-    def sample_audio_path(self):
-        """Path to sample audio file for testing."""
-        # This would be a real Turkish voice command: "Chrome'u aç"
-        return Path("tests/fixtures/audio/chrome_ac.opus")
     
     async def test_complete_voice_command_flow_success(
         self, audio_processor, stt_service, command_interpreter, system_controller

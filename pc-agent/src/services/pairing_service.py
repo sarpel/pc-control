@@ -20,12 +20,13 @@ import string
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import asyncio
 import jwt
 
 from src.models.device_pairing import DevicePairing, PairingStatus
 from src.services.certificate_service import CertificateService
+from src.services.audit_log_service import AuditLogService, AuditEvent, Severity
 from src.database.connection import Database
 
 logger = logging.getLogger(__name__)
@@ -59,19 +60,24 @@ class PairingService:
     PAIRING_EXPIRATION_MINUTES = 5
     TOKEN_EXPIRATION_HOURS = 24
 
-    def __init__(self, database: Database, certificate_service: CertificateService):
+    # Active pairing sessions (shared across instances)
+    _active_sessions: Dict[str, PairingSession] = {}
+
+    def __init__(self, database: Database, certificate_service: CertificateService, audit_log_service: Optional[AuditLogService] = None):
         """
         Initialize pairing service.
 
         Args:
             database: Database connection for persistence
             certificate_service: Service for certificate generation
+            audit_log_service: Service for audit logging (optional)
         """
         self.db = database
         self.cert_service = certificate_service
+        self.audit_log = audit_log_service
 
         # Active pairing sessions (in-memory)
-        self.active_sessions: Dict[str, PairingSession] = {}
+        self.active_sessions = self._active_sessions
 
         # JWT secret for auth tokens (should be loaded from secure config)
         self.jwt_secret = self._load_jwt_secret()
@@ -121,7 +127,7 @@ class PairingService:
         paired_count = await self._count_paired_devices()
         if paired_count >= self.MAX_PAIRED_DEVICES:
             raise ValueError(
-                f"Maximum {self.MAX_PAIRED_DEVICES} devices already paired. "
+                f"Maximum {self.MAX_PAIRED_DEVICES} devices limit reached. "
                 f"Please revoke a device before pairing a new one."
             )
 
@@ -150,6 +156,18 @@ class PairingService:
             f"Pairing initiated for device {device_id} ({device_name}): "
             f"code={pairing_code}, expires in {self.PAIRING_EXPIRATION_MINUTES} minutes"
         )
+
+        if self.audit_log:
+            await self.audit_log.log_event(
+                event_type=AuditEvent.PAIRING_INITIATED,
+                device_id=device_id,
+                details={
+                    "device_name": device_name,
+                    "pairing_id": pairing_id
+                },
+                severity=Severity.INFO,
+                security_related=True
+            )
 
         return {
             "pairing_id": pairing_id,
@@ -229,6 +247,18 @@ class PairingService:
         del self.active_sessions[pairing_id]
 
         logger.info(f"Pairing completed for device {device_id} ({session.device_name})")
+
+        if self.audit_log:
+            await self.audit_log.log_event(
+                event_type=AuditEvent.PAIRING_VERIFIED,
+                device_id=device_id,
+                details={
+                    "device_name": session.device_name,
+                    "pairing_id": pairing_id
+                },
+                severity=Severity.INFO,
+                security_related=True
+            )
 
         return {
             "ca_certificate": certificates["ca_certificate"],
@@ -422,7 +452,27 @@ class PairingService:
         if not row:
             return None
 
-        return DevicePairing(**dict(row))
+        # Filter row data to match DevicePairing fields
+        data = dict(row)
+        valid_fields = {f.name for f in fields(DevicePairing)}
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+        
+        # Convert status string to Enum if needed
+        if 'status' in filtered_data and isinstance(filtered_data['status'], str):
+            try:
+                filtered_data['status'] = PairingStatus(filtered_data['status'])
+            except ValueError:
+                pass
+
+        # Convert datetime strings to datetime objects
+        for date_field in ['created_at', 'completed_at', 'token_expires_at', 'paired_at', 'expires_at']:
+            if date_field in filtered_data and isinstance(filtered_data[date_field], str):
+                try:
+                    filtered_data[date_field] = datetime.fromisoformat(filtered_data[date_field])
+                except ValueError:
+                    pass
+
+        return DevicePairing(**filtered_data)
 
     async def _save_device_pairing(self, pairing: DevicePairing):
         """Save device pairing to database."""
