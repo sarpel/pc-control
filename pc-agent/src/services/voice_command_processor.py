@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime
 
 from services.browser_control import BrowserControlService, BrowserAction, ElementSelectorType
-from services.system_control import SystemControlService, SystemAction, FileType
+from services.system_control import SystemControlService, SystemAction
 from services.connection_manager import ConnectionManager
 from database.connection import get_database_connection
 
