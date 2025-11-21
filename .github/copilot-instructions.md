@@ -64,6 +64,7 @@ mypy src/
 
 # Format
 ruff format .
+# Note: black is also available but redundant with ruff format
 
 # Run development server
 python -m uvicorn src.api.websocket_server:app --host 0.0.0.0 --port 8765 --reload
@@ -116,7 +117,7 @@ make clean
 
 **Style:**
 - Line length: 100 characters
-- Use Ruff for linting and formatting
+- Use Ruff for linting and formatting (Black is also configured but redundant with ruff format)
 - Use mypy for type checking
 - Follow PEP 8 conventions
 
