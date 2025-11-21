@@ -410,8 +410,8 @@ class PairingRepository(
         try {
             // Remove from database
             // Note: deviceId here is likely the connectionId or related
-            // If deviceId is connectionId:
-            appDatabase.pcConnectionDao().deleteConnection(deviceId)
+            // Using deleteConnectionById since deviceId is a String (connectionId)
+            appDatabase.pcConnectionDao().deleteConnectionById(deviceId)
             
             removeStoredData(deviceId)
         } catch (e: Exception) {

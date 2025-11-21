@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from collections import deque
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status, FastAPI
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, FastAPI
 
 # Create FastAPI app instance if running as module
 app = FastAPI()
