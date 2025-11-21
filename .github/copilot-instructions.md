@@ -64,7 +64,6 @@ mypy src/
 
 # Format
 ruff format .
-black .
 
 # Run development server
 python -m uvicorn src.api.websocket_server:app --host 0.0.0.0 --port 8765 --reload
@@ -118,7 +117,6 @@ make clean
 **Style:**
 - Line length: 100 characters
 - Use Ruff for linting and formatting
-- Use Black for code formatting
 - Use mypy for type checking
 - Follow PEP 8 conventions
 
@@ -198,7 +196,8 @@ Python:
 ```bash
 cd pc-agent
 pip install --upgrade <package>
-pip freeze > requirements.txt  # Update lockfile
+# Then manually update the specific version in requirements.txt or requirements-dev.txt
+# Run tests to ensure compatibility
 ```
 
 Android:
