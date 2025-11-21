@@ -28,8 +28,8 @@ data class QueueStatus(
 )
 
 /**
- * Generate a unique connection ID
+ * Generate a unique connection ID using UUID for cryptographic security
  */
 fun generateConnectionId(): String {
-    return "conn_${System.currentTimeMillis()}_${(Math.random() * 10000).toInt()}"
+    return java.util.UUID.randomUUID().toString()
 }

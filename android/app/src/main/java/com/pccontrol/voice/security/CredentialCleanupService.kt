@@ -283,14 +283,6 @@ class CredentialCleanupService private constructor(
 
         return CleanupDetail(deleted.size, errors)
     }
-            Log.d(TAG, "Database credential cleanup completed")
-        } catch (e: Exception) {
-            errors.add("Database cleanup error: ${e.message}")
-            Log.e(TAG, "Error during database cleanup", e)
-        }
-
-        return CleanupDetail(deleted.size, errors)
-    }
 
     /**
      * Clean up specific credential by key alias.

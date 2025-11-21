@@ -2,6 +2,7 @@ package com.pccontrol.voice.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
+import com.pccontrol.voice.domain.services.AudioCaptureService
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
@@ -40,7 +41,7 @@ class AudioStreamingTest {
     @Before
     fun setup() {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-        audioService = com.pccontrol.voice.domain.services.AudioCaptureService.Factory(context).create()
+        audioService = AudioCaptureService.Factory(context).create()
     }
 
     @Test

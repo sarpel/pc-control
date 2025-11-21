@@ -245,21 +245,23 @@ class SpeechToTextService private constructor(
         withContext(Dispatchers.IO) {
             try {
                 val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-tr.bin")
-                val connection = url.openConnection()
-                connection.connect()
-                
-                val input = BufferedInputStream(url.openStream())
-                val output = FileOutputStream(modelFile)
-                
-                val data = ByteArray(1024)
-                var count: Int
-                while (input.read(data).also { count = it } != -1) {
-                    output.write(data, 0, count)
+                val connection = url.openConnection().apply {
+                    connectTimeout = 10_000  // 10 seconds to establish connection
+                    readTimeout = 30_000     // 30 seconds to read data
                 }
+                // Note: getInputStream() implicitly calls connect()
                 
-                output.flush()
-                output.close()
-                input.close()
+                BufferedInputStream(connection.getInputStream()).use { input ->
+                    FileOutputStream(modelFile).use { output ->
+                        // 8KB buffer for efficient large file downloads (model is ~75MB)
+                        val buffer = ByteArray(8 * 1024)
+                        var count: Int
+                        while (input.read(buffer).also { count = it } != -1) {
+                            output.write(buffer, 0, count)
+                        }
+                        output.flush()
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("SpeechToTextService", "Error downloading model", e)
                 throw e

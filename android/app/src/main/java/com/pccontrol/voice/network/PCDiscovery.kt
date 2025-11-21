@@ -251,54 +251,54 @@ class PCDiscovery(private val context: Context) {
         val discoveredPCs = mutableListOf<DiscoveredPC>()
         try {
             Log.d(TAG, "Starting SSDP discovery")
-            val socket = DatagramSocket()
-            socket.soTimeout = 2000
-            
-            val ssdpRequest = "M-SEARCH * HTTP/1.1\r\n" +
-                    "HOST: 239.255.255.250:1900\r\n" +
-                    "MAN: \"ssdp:discover\"\r\n" +
-                    "MX: 1\r\n" +
-                    "ST: urn:schemas-upnp-org:device:Basic:1\r\n" +
-                    "\r\n"
-            
-            val sendData = ssdpRequest.toByteArray()
-            val sendPacket = DatagramPacket(
-                sendData, 
-                sendData.size, 
-                InetAddress.getByName("239.255.255.250"), 
-                1900
-            )
-            
-            socket.send(sendPacket)
-            
-            val receiveData = ByteArray(1024)
-            val receivePacket = DatagramPacket(receiveData, receiveData.size)
-            
-            val endTime = System.currentTimeMillis() + 2000
-            while (System.currentTimeMillis() < endTime) {
-                try {
-                    socket.receive(receivePacket)
-                    val response = String(receivePacket.data, 0, receivePacket.length)
-                    val ip = receivePacket.address.hostAddress
-                    
-                    // Check if it's our PC agent (simplified check)
-                    if (response.contains("PC-Control") && ip != null) {
-                         discoveredPCs.add(
-                            DiscoveredPC(
-                                id = "pc_${ip.replace(".", "_")}",
-                                name = "PC Agent (SSDP)",
-                                ipAddress = ip,
-                                port = PC_AGENT_PORT,
-                                isOnline = true,
-                                lastSeen = System.currentTimeMillis()
-                            )
-                         )
+            DatagramSocket().use { socket ->
+                socket.soTimeout = 2000
+                
+                val ssdpRequest = "M-SEARCH * HTTP/1.1\r\n" +
+                        "HOST: 239.255.255.250:1900\r\n" +
+                        "MAN: \"ssdp:discover\"\r\n" +
+                        "MX: 1\r\n" +
+                        "ST: urn:schemas-upnp-org:device:Basic:1\r\n" +
+                        "\r\n"
+                
+                val sendData = ssdpRequest.toByteArray()
+                val sendPacket = DatagramPacket(
+                    sendData, 
+                    sendData.size, 
+                    InetAddress.getByName("239.255.255.250"), 
+                    1900
+                )
+                
+                socket.send(sendPacket)
+                
+                val receiveData = ByteArray(1024)
+                val receivePacket = DatagramPacket(receiveData, receiveData.size)
+                
+                val endTime = System.currentTimeMillis() + 2000
+                while (System.currentTimeMillis() < endTime) {
+                    try {
+                        socket.receive(receivePacket)
+                        val response = String(receivePacket.data, 0, receivePacket.length)
+                        val ip = receivePacket.address.hostAddress
+                        
+                        // Check if it's our PC agent (simplified check)
+                        if (response.contains("PC-Control") && ip != null) {
+                             discoveredPCs.add(
+                                DiscoveredPC(
+                                    id = "pc_${ip.replace(".", "_")}",
+                                    name = "PC Agent (SSDP)",
+                                    ipAddress = ip,
+                                    port = PC_AGENT_PORT,
+                                    isOnline = true,
+                                    lastSeen = System.currentTimeMillis()
+                                )
+                             )
+                        }
+                    } catch (e: SocketTimeoutException) {
+                        break
                     }
-                } catch (e: SocketTimeoutException) {
-                    break
                 }
             }
-            socket.close()
         } catch (e: Exception) {
             Log.e(TAG, "Error in SSDP discovery", e)
         }
