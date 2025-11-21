@@ -314,21 +314,6 @@ class VoiceCommandProcessor:
     def _initialize_command_patterns(self) -> Dict[CommandIntent, List[str]]:
         """Initialize command patterns for intent detection."""
         return {
-            CommandIntent.NAVIGATE: [
-                r"(git|göt|aç|naivgate to|navigate|go to)\s+(.+)",
-                r"(sayfaya git|siteye git|website)\s+(.+)",
-                r"(ziyaret et|göz at)\s+(.+)"
-            ],
-            CommandIntent.SEARCH: [
-                r"(ara|bul|search for|google|bing)\s+(.+)",
-                r"(internette ara|webde ara)\s+(.+)",
-                r"(bilgi bul|araştır)\s+(.+)"
-            ],
-            CommandIntent.LAUNCH: [
-                r"(çalıştır|başlat|aç|launch|open|run)\s+(.+)",
-                r"(programı aç|uygulama başlat)\s+(.+)",
-                r"(start|execute)\s+(.+)"
-            ],
             CommandIntent.VOLUME_UP: [
                 r"(sesi aç|ses yükselt|volume up|turn up volume)",
                 r"(daha yüksek ses|sesi artır)",
@@ -342,12 +327,35 @@ class VoiceCommandProcessor:
             CommandIntent.VOLUME_SET: [
                 r"(sesi ayarla|volume set|set volume)\s+(\d+)",
                 r"(ses seviyesi)\s+(\d+)",
-                r"(volume)\s+(\d+)"
+                r"(volume)\s+(\d+)",
+                r"sesi\s+(\d+)\s+(ayarla|yap)"
             ],
             CommandIntent.FIND_FILE: [
                 r"(dosya bul|ara dosyayı|find file|search file)\s+(.+)",
                 r"(bul|ara)\s+(.+)\s+(dosya|file)",
-                r"(nerede|where is)\s+(.+)"
+                r"(nerede|where is)\s+(.+)",
+                r"(.+)\s+(dosyasını|dosyayı)\s+(bul|ara)",
+                r"(dosya|dosyayı)\s+(bul|ara)"
+            ],
+            CommandIntent.NAVIGATE: [
+                r"(git|göt|aç|naivgate to|navigate|go to)\s+(.+)",
+                r"(sayfaya git|siteye git|website)\s+(.+)",
+                r"(ziyaret et|göz at)\s+(.+)",
+                r"(.+)\s+(git|göt|ziyaret et)",
+                r"([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+(aç)",
+                r"(.+)\s+(sitesini|sayfasını)\s+aç"
+            ],
+            CommandIntent.SEARCH: [
+                r"(ara|bul|search for|google|bing)\s+(.+)",
+                r"(internette ara|webde ara)\s+(.+)",
+                r"(bilgi bul|araştır)\s+(.+)",
+                r"(.+)\s+(ara|bul|araştır)"
+            ],
+            CommandIntent.LAUNCH: [
+                r"(çalıştır|başlat|aç|launch|open|run)\s+(.+)",
+                r"(programı aç|uygulama başlat)\s+(.+)",
+                r"(start|execute)\s+(.+)",
+                r"(.+)\s+(çalıştır|başlat|aç)"
             ],
             CommandIntent.SYSTEM_INFO: [
                 r"(sistem bilgisi|bilgisayar bilgisi|system info|computer info)",
@@ -362,12 +370,14 @@ class VoiceCommandProcessor:
             CommandIntent.CLICK: [
                 r"(tıkla|click|bas)\s+(.+)",
                 r"(seç|select)\s+(.+)",
-                r"(butona tıkla)\s+(.+)"
+                r"(butona tıkla)\s+(.+)",
+                r"(.+)\s+(tıkla|bas|seç)"
             ],
             CommandIntent.TYPE: [
                 r"(yaz|type|enter)\s+(.+)",
                 r"(metin gir|text enter)\s+(.+)",
-                r"(araştır yaz|search type)\s+(.+)"
+                r"(araştır yaz|search type)\s+(.+)",
+                r"(.+)\s+(yaz|gir)"
             ],
             CommandIntent.CLOSE: [
                 r"(kapat|close|exit|quit)",
@@ -395,6 +405,9 @@ class VoiceCommandProcessor:
         """Normalize text for processing."""
         # Convert to lowercase
         text = text.lower().strip()
+
+        # Remove Turkish suffixes with apostrophe
+        text = re.sub(r"'[a-z]+", "", text)
 
         # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text)
@@ -443,24 +456,43 @@ class VoiceCommandProcessor:
 
         # Extract URL for navigation
         if intent == CommandIntent.NAVIGATE:
+            # Try VO pattern first
             url_match = re.search(r'(?:git|göt|aç|go to|navigate)\s+(.+)', text, re.IGNORECASE)
             if url_match:
                 url = url_match.group(1).strip()
                 # Clean up URL
                 url = re.sub(r'\s+(?:gibi|like|diye)$', '', url)
                 entities["url"] = url
+            else:
+                # Try SOV pattern
+                url_match = re.search(r'(.+)\s+(?:git|göt|ziyaret et|aç)', text, re.IGNORECASE)
+                if url_match:
+                    url = url_match.group(1).strip()
+                    entities["url"] = url
 
         # Extract search query
         elif intent == CommandIntent.SEARCH:
+            # Try VO pattern first
             search_match = re.search(r'(?:ara|bul|search for|google)\s+(.+)', text, re.IGNORECASE)
             if search_match:
                 entities["search_query"] = search_match.group(1).strip()
+            else:
+                # Try SOV pattern
+                search_match = re.search(r'(.+)\s+(?:ara|bul|araştır)', text, re.IGNORECASE)
+                if search_match:
+                    entities["search_query"] = search_match.group(1).strip()
 
         # Extract app name
         elif intent == CommandIntent.LAUNCH:
+            # Try VO pattern first
             app_match = re.search(r'(?:çalıştır|başlat|aç|launch|open)\s+(.+)', text, re.IGNORECASE)
             if app_match:
                 entities["app_name"] = app_match.group(1).strip()
+            else:
+                # Try SOV pattern
+                app_match = re.search(r'(.+)\s+(?:çalıştır|başlat|aç)', text, re.IGNORECASE)
+                if app_match:
+                    entities["app_name"] = app_match.group(1).strip()
 
         # Extract volume level
         elif intent == CommandIntent.VOLUME_SET:
@@ -471,21 +503,39 @@ class VoiceCommandProcessor:
 
         # Extract file name
         elif intent == CommandIntent.FIND_FILE:
+            # Try VO pattern first
             file_match = re.search(r'(?:bul|ara|find)\s+(.+)', text, re.IGNORECASE)
             if file_match:
                 entities["file_name"] = file_match.group(1).strip()
+            else:
+                # Try SOV pattern
+                file_match = re.search(r'(.+)\s+(?:dosyasını|dosyayı)\s+(?:bul|ara)', text, re.IGNORECASE)
+                if file_match:
+                    entities["file_name"] = file_match.group(1).strip()
 
         # Extract click target
         elif intent == CommandIntent.CLICK:
+            # Try VO pattern first
             click_match = re.search(r'(?:tıkla|click|bas)\s+(.+)', text, re.IGNORECASE)
             if click_match:
                 entities["target_text"] = click_match.group(1).strip()
+            else:
+                # Try SOV pattern
+                click_match = re.search(r'(.+)\s+(?:tıkla|bas|seç)', text, re.IGNORECASE)
+                if click_match:
+                    entities["target_text"] = click_match.group(1).strip()
 
         # Extract text to type
         elif intent == CommandIntent.TYPE:
+            # Try VO pattern first
             type_match = re.search(r'(?:yaz|type|enter)\s+(.+)', text, re.IGNORECASE)
             if type_match:
                 entities["text_to_type"] = type_match.group(1).strip()
+            else:
+                # Try SOV pattern
+                type_match = re.search(r'(.+)\s+(?:yaz|gir)', text, re.IGNORECASE)
+                if type_match:
+                    entities["text_to_type"] = type_match.group(1).strip()
 
         # Extract scroll direction
         elif intent == CommandIntent.SCROLL:
