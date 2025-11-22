@@ -14,7 +14,7 @@ set CERT_DIR=%CONFIG_DIR%\certificates
 set LOG_DIR=%CONFIG_DIR%\logs
 
 set SCRIPT_DIR=%~dp0
-for %%a in ("%~dp0..\src") do set "SRC_DIR=%%~fa"
+for %%a in ("%~dp0..\pc-agent\src") do set "SRC_DIR=%%~fa"
 
 REM Colors for output
 set "RED=[91m"
@@ -109,9 +109,9 @@ REM Upgrade pip
 %PYTHON_CMD% -m pip install --upgrade pip
 
 REM Install requirements if requirements.txt exists
-if exist "requirements.txt" (
+if exist "%~dp0..\pc-agent\requirements.txt" (
     call :log_info "Installing Python dependencies..."
-    %PYTHON_CMD% -m pip install -r requirements.txt
+    %PYTHON_CMD% -m pip install -r "%~dp0..\pc-agent\requirements.txt"
 ) else (
     call :log_warning "requirements.txt not found. Installing basic dependencies..."
     pip install fastapi uvicorn python-multipart websockets python-jose[cryptography] passlib[bcrypt]
@@ -129,7 +129,7 @@ call :log_info "Checking SSL certificates..."
 if not exist "%CERT_DIR%\server.crt" (
     call :log_warning "SSL certificates not found. Generating new certificates..."
 
-    %PYTHON_CMD% -c "import os, sys; sys.path.append(r'%SRC_DIR%'); from utils.certificate_generator import CertificateGenerator as CG; g = CG(); g.cert_dir = r'%CERT_DIR%'; g.generate_all_certificates(); print('Certificates generated successfully!')"
+    %PYTHON_CMD% -c "import os, sys; sys.path.append(r'%SRC_DIR%'); from utils.certificate_generator import CertificateGenerator as CG; g = CG(r'%CERT_DIR%'); g.generate_all_certificates(); print('Certificates generated successfully!')"
 
     if errorlevel 1 (
         call :log_error "Failed to generate SSL certificates"
@@ -156,7 +156,7 @@ set PORT=%2
 if "%PORT%"=="" set PORT=%DEFAULT_PORT%
 
 REM Change to the src directory
-cd /d "%~dp0..\src"
+cd /d "%~dp0..\pc-agent\src"
 
 REM Set environment variables
 set PYTHONPATH=%PYTHONPATH%;%CD%\..
@@ -164,6 +164,13 @@ set PC_VOICE_HOST=%HOST%
 set PC_VOICE_PORT=%PORT%
 set PC_VOICE_CONFIG_DIR=%CONFIG_DIR%
 set PC_VOICE_CERT_DIR=%CERT_DIR%
+
+REM Set PC Agent specific environment variables
+set PC_AGENT_HOST=%HOST%
+set PC_AGENT_PORT=%PORT%
+set PC_AGENT_CERTIFICATES_DIR=%CERT_DIR%
+set PC_AGENT_CERT_FILE=%CERT_DIR%\server.crt
+set PC_AGENT_KEY_FILE=%CERT_DIR%\server.key
 
 REM Start the service
 call :log_info "Starting server on %HOST%:%PORT%"
@@ -175,9 +182,7 @@ call :log_info "Press Ctrl+C to stop the service"
     --port "%PORT%" ^
     --ssl-keyfile "%CERT_DIR%\server.key" ^
     --ssl-certfile "%CERT_DIR%\server.crt" ^
-    --log-level info ^
-    --access-log "%LOG_DIR%\access.log" ^
-    --log-file "%LOG_DIR%\server.log"
+    --log-level info
 
 goto :eof
 

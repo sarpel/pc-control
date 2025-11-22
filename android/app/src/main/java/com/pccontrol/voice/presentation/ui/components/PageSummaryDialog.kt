@@ -239,6 +239,7 @@ private fun ShareContentDialog(
     title: String,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {

@@ -27,7 +27,7 @@ import kotlin.random.Random
 class PCDiscovery(private val context: Context) {
     companion object {
         private const val TAG = "PCDiscovery"
-        private const val PC_AGENT_PORT = 8443
+        private const val PC_AGENT_PORT = 8765
         private const val WOL_BROADCAST_PORT = 9
         private const val DISCOVERY_TIMEOUT_MS = 5000L
         private const val MAX_CONCURRENT_SCANS = 20
@@ -94,9 +94,10 @@ class PCDiscovery(private val context: Context) {
      */
     suspend fun testPCConnection(ipAddress: String): Boolean {
         return withContext(Dispatchers.IO) {
+            var connection: HttpURLConnection? = null
             try {
                 val url = URL("https://$ipAddress:$PC_AGENT_PORT/api/health")
-                val connection = url.openConnection() as HttpURLConnection
+                connection = url.openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "GET"
                     connectTimeout = 3000
@@ -110,6 +111,8 @@ class PCDiscovery(private val context: Context) {
             } catch (e: IOException) {
                 Log.d(TAG, "PC not responding at $ipAddress: ${e.message}")
                 false
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -219,9 +222,10 @@ class PCDiscovery(private val context: Context) {
      * Scan a single IP address for PC agent.
      */
     private suspend fun scanIPAddress(ipAddress: String): DiscoveredPC? {
+        var connection: HttpURLConnection? = null
         return try {
             val url = URL("https://$ipAddress:$PC_AGENT_PORT/api/system/info")
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
             connection.apply {
                 requestMethod = "GET"
                 connectTimeout = 2000
@@ -232,7 +236,7 @@ class PCDiscovery(private val context: Context) {
             val responseCode = connection.responseCode
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                val responseBody = connection.inputStream.bufferedReader().readText()
+                val responseBody = connection.inputStream.use { it.bufferedReader().readText() }
                 parsePCInfo(ipAddress, responseBody)
             } else {
                 null
@@ -241,6 +245,8 @@ class PCDiscovery(private val context: Context) {
         } catch (e: Exception) {
             // This is normal - most IPs won't have a PC agent
             null
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -289,7 +295,7 @@ class PCDiscovery(private val context: Context) {
                                     name = "PC Agent (SSDP)",
                                     ipAddress = ip,
                                     port = PC_AGENT_PORT,
-                                    isOnline = true,
+                                    isAvailable = true,
                                     lastSeen = System.currentTimeMillis()
                                 )
                              )
@@ -341,7 +347,9 @@ class PCDiscovery(private val context: Context) {
                                             DiscoveredPC(
                                                 id = "pc_${ip.replace(".", "_")}",
                                                 name = name,
-                                                ipAddress = ip
+                                                ipAddress = ip,
+                                                isAvailable = true,
+                                                lastSeen = System.currentTimeMillis()
                                             )
                                         )
                                     }
@@ -558,7 +566,7 @@ data class DiscoveredPC(
     val ipAddress: String,
     val isAvailable: Boolean,
     val lastSeen: Long,
-    val port: Int = 8443,
+    val port: Int = 8765,
     val macAddress: String? = null
 )
 

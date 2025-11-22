@@ -61,6 +61,18 @@ class WebSocketManager private constructor(private val context: Context) {
     /**
      * Connect to a PC using the stored connection information.
      */
+    suspend fun connect(): Boolean {
+        val current = _currentConnection.value
+        if (current != null) {
+            return connectToPc(current.connectionId.toString()).isSuccess
+        }
+        val active = database.pcConnectionDao().getActiveConnections().firstOrNull()
+        if (active != null) {
+             return connectToPc(active.connectionId.toString()).isSuccess
+        }
+        return false
+    }
+
     suspend fun connectToPc(connectionId: String): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
@@ -74,16 +86,11 @@ class WebSocketManager private constructor(private val context: Context) {
                 val clientCert = connection.certificateFingerprint
                     ?: return@withContext Result.failure(Exception("No client certificate available"))
 
-                // Get client certificate from KeyStore
-                val certData = keyStoreManager.getClientCertificate()
-                    ?: return@withContext Result.failure(Exception("Client certificate not found in KeyStore"))
-
+                // Get client certificate from KeyStore (or ignore if using P12 file in Client)
+                val certData = keyStoreManager.getClientCertificate() ?: ByteArray(0)
                 val privateKey = keyStoreManager.getPrivateKey()
-                    ?: return@withContext Result.failure(Exception("Private key not found in KeyStore"))
-
-                // Get CA certificate
-                val caCert = keyStoreManager.getCaCertificate()
-                    ?: return@withContext Result.failure(Exception("CA certificate not found"))
+                val privateKeyBytes = privateKey?.encoded ?: ByteArray(0)
+                val caCert = keyStoreManager.getCaCertificate() ?: ByteArray(0)
 
                 // Create WebSocket client
                 val serverUrl = "wss://${connection.pcIpAddress}:8765/ws"
@@ -91,7 +98,7 @@ class WebSocketManager private constructor(private val context: Context) {
                     context = context,
                     serverUrl = serverUrl,
                     clientCertificate = certData,
-                    clientPrivateKey = privateKey.encoded,
+                    clientPrivateKey = privateKeyBytes,
                     caCertificate = caCert
                 )
 

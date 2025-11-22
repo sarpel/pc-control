@@ -273,7 +273,7 @@ class CredentialCleanupService private constructor(
 
             // Clear voice commands (may contain sensitive transcripts)
             // Using deleteExpiredCommands with a future timestamp to delete all
-            database.voiceCommandDao().deleteExpiredCommands(System.currentTimeMillis() + 1000000000L)
+            database.commandHistoryDao().deleteExpiredCommands(System.currentTimeMillis() + 1000000000L)
             deleted.add("Voice command history")
             
         } catch (e: Exception) {

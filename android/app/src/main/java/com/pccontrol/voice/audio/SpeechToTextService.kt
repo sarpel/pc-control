@@ -28,8 +28,8 @@ class SpeechToTextService private constructor(
     private var whisperModel: WhisperModel? = null
 
     companion object {
-        private const val MODEL_NAME = "whisper-base-tr.bin"
-        private const val MODEL_VERSION = "base-tr"
+        private const val MODEL_NAME = "ggml-base.bin"
+        private const val MODEL_VERSION = "base"
         private const val LANGUAGE = "tr"
         private const val DEFAULT_THREADS = 2
         private const val MAX_AUDIO_LENGTH_SECONDS = 30
@@ -246,7 +246,7 @@ class SpeechToTextService private constructor(
     private suspend fun downloadModel(modelFile: File) {
         withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-tr.bin")
+                val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin")
                 val connection = url.openConnection().apply {
                     connectTimeout = 10_000  // 10 seconds to establish connection
                     readTimeout = 30_000     // 30 seconds to read data
@@ -272,9 +272,23 @@ class SpeechToTextService private constructor(
     }
 
     private fun getAudioDuration(audioFile: File): Int {
-        // This would use MediaMetadataRetriever to get duration
-        // For now, return a default
-        return 10 // 10 seconds default
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(audioFile.absolutePath)
+                val duration = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+                )
+                val durationMs = duration?.toLongOrNull() ?: 0L
+                (durationMs / 1000).toInt() // Convert to seconds
+            } finally {
+                retriever.release()
+            }
+        } catch (e: Exception) {
+            Log.w("SpeechToTextService", "Could not get audio duration: ${e.message}")
+            // Return reasonable default for unknown duration
+            10
+        }
     }
 
     private fun createTempAudioFile(audioData: ByteArray, sampleRate: Int): File {

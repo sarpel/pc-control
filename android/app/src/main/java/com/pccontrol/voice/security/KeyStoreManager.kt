@@ -15,7 +15,7 @@ import java.security.cert.CertificateFactory
 import java.security.spec.RSAKeyGenParameterSpec
 import java.util.*
 import javax.crypto.*
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.x500.X500Principal
 
@@ -123,12 +123,21 @@ class KeyStoreManager private constructor(private val context: Context) {
     }
 
     /**
-     * Generate AES key for symmetric encryption.
+     * Generate AES key for symmetric encryption using Android KeyStore.
      */
-    fun generateAESKey(): SecretKey {
+    private fun generateAESKey(): SecretKey {
         return try {
-            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM_AES)
-            keyGenerator.init(AES_KEY_SIZE)
+            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+            val spec = KeyGenParameterSpec.Builder(
+                "aes_key",
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(BLOCK_MODE)
+                .setEncryptionPaddings(PADDING)
+                .setRandomizedEncryptionRequired(false) // We use our own IV
+                .build()
+
+            keyGenerator.init(spec)
             keyGenerator.generateKey()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to generate AES key", e)
@@ -148,12 +157,12 @@ class KeyStoreManager private constructor(private val context: Context) {
             null
         }
     }
-    
+
     /**
      * Get private key from KeyStore (alias for getRSAPrivateKey).
      */
     fun getPrivateKey(): PrivateKey? = getRSAPrivateKey()
-    
+
     /**
      * Get client certificate from KeyStore.
      */
@@ -166,7 +175,7 @@ class KeyStoreManager private constructor(private val context: Context) {
             null
         }
     }
-    
+
     /**
      * Get CA certificate from KeyStore.
      */
@@ -281,7 +290,7 @@ class KeyStoreManager private constructor(private val context: Context) {
     @Throws(Exception::class)
     fun decryptData(encryptedData: ByteArray, key: SecretKey, iv: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(ENCRYPTION_TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
         return cipher.doFinal(encryptedData)
     }
 
@@ -334,19 +343,8 @@ class KeyStoreManager private constructor(private val context: Context) {
                 return existingKey
             }
 
-            // Generate new AES key
-            val newKey = generateAESKey()
-
-            // Store AES key in KeyStore
-            val keyEntry = KeyStore.SecretKeyEntry(newKey)
-            val protectionParameter = android.security.keystore.KeyProtection.Builder(
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            ).setBlockModes(BLOCK_MODE)
-                .setEncryptionPaddings(PADDING)
-                .build()
-
-            keyStore.setEntry("aes_key", keyEntry, protectionParameter)
-            newKey
+            // Generate new AES key directly in KeyStore
+            generateAESKey()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get or create AES key", e)
             throw SecurityException("AES key management failed", e)

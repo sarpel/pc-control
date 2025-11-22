@@ -53,12 +53,13 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(DatabaseCallback(context))
+                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
-        
+
         fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 
@@ -79,13 +80,13 @@ abstract class AppDatabase : RoomDatabase() {
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
 
-            // Enable foreign key constraints
+            // Enable foreign key constraints (Room does this by default, but keeping for safety if needed)
             db.execSQL("PRAGMA foreign_keys=ON")
 
             // Configure database for performance
-            db.execSQL("PRAGMA journal_mode=WAL")
+            // db.execSQL("PRAGMA journal_mode=WAL") // Removed: Handled by Room builder
             db.execSQL("PRAGMA synchronous=NORMAL")
-            db.execSQL("PRAGMA cache_size=10000")
+            // db.execSQL("PRAGMA cache_size=10000") // Removed: Can be problematic with execSQL if it returns data in some versions
         }
 
         private fun createInitialSettings(db: SupportSQLiteDatabase) {
@@ -187,7 +188,7 @@ abstract class AppDatabase : RoomDatabase() {
         override fun migrate(database: SupportSQLiteDatabase) {
             // Add missing columns to app_settings table
             val currentTime = System.currentTimeMillis()
-            
+
             database.execSQL("ALTER TABLE app_settings ADD COLUMN description TEXT")
             database.execSQL("ALTER TABLE app_settings ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0")
             database.execSQL("ALTER TABLE app_settings ADD COLUMN created_at INTEGER NOT NULL DEFAULT $currentTime")
