@@ -239,6 +239,7 @@ private fun ShareContentDialog(
     title: String,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -272,6 +273,7 @@ private fun ShareContentDialog(
                         type = "text/plain"
                     }
                     val shareIntent = android.content.Intent.createChooser(sendIntent, title)
+                    shareIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(shareIntent)
                     onDismiss()
                 }

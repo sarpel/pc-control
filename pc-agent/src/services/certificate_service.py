@@ -22,7 +22,8 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from config.settings import get_settings
+from src.config.settings import get_settings
+from src.utils.certificate_generator import CertificateGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,53 @@ class CertificateService:
         self.server_cert_path = base_dir / "server.crt"
         self.client_certs_dir = base_dir / "clients"
         self.client_certs_dir.mkdir(parents=True, exist_ok=True)
+
+    async def initialize(self) -> None:
+        """
+        Initialize certificate service.
+        Ensures CA and server certificates exist.
+        """
+        try:
+            ca_key_path = self.ca_cert_path.parent / "ca.key"
+            server_key_path = self.server_cert_path.parent / "server.key"
+            
+            generator = CertificateGenerator(self.ca_cert_path.parent)
+            
+            # Check/Generate CA certificate
+            if not self.ca_cert_path.exists() or not ca_key_path.exists():
+                logger.info("Generating new CA certificate...")
+                ca_key, ca_cert = generator.generate_ca_certificate()
+                
+                with open(self.ca_cert_path, "wb") as f:
+                    f.write(ca_cert)
+                with open(ca_key_path, "wb") as f:
+                    f.write(ca_key)
+                logger.info("CA certificate generated successfully")
+            
+            # Check/Generate Server certificate
+            if not self.server_cert_path.exists() or not server_key_path.exists():
+                logger.info("Generating new server certificate...")
+                
+                # Read CA cert and key
+                with open(self.ca_cert_path, "rb") as f:
+                    ca_cert_pem = f.read()
+                with open(ca_key_path, "rb") as f:
+                    ca_key_pem = f.read()
+                
+                server_key, server_cert = generator.generate_server_certificate(
+                    ca_private_key=ca_key_pem,
+                    ca_cert=ca_cert_pem
+                )
+                
+                with open(self.server_cert_path, "wb") as f:
+                    f.write(server_cert)
+                with open(server_key_path, "wb") as f:
+                    f.write(server_key)
+                logger.info("Server certificate generated successfully")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize certificates: {e}")
+            raise
 
     def load_certificate(self, cert_path: Path) -> Optional[x509.Certificate]:
         """
@@ -541,8 +589,6 @@ class CertificateService:
         Returns:
             Dictionary with CA cert, client cert, and private key (PEM format)
         """
-        from utils.certificate_generator import CertificateGenerator
-        
         # Ensure CA exists (generate if needed, mostly for tests)
         ca_key_path = self.ca_cert_path.parent / "ca.key"
         

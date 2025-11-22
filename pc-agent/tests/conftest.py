@@ -4,20 +4,39 @@ Pytest configuration and fixtures for PC Control Agent tests.
 This module provides shared test fixtures and configuration for all test types.
 """
 
-import asyncio
 import os
+import sys
+
+# Ensure we're using test settings before importing app
+os.environ["PC_AGENT_ENVIRONMENT"] = "testing"
+os.environ["PC_AGENT_USE_SSL"] = "false"
+
+import asyncio
 import tempfile
 from pathlib import Path
 from typing import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
-from src.api.websocket_server import app
+from src.api.main import app
 from src.config.settings import get_settings, Settings
+
+
+@pytest.fixture
+async def cleanup_database():
+    """Ensure database connection is closed after each test."""
+    yield
+    from src.database import connection
+    if connection._db_connection:
+        await connection._db_connection.close()
+        connection._db_connection = None
+    # Force GC to release file handles
+    import gc
+    gc.collect()
 
 
 @pytest.fixture(scope="session")
@@ -31,20 +50,45 @@ def event_loop():
 @pytest.fixture
 def test_settings() -> Generator[Settings, None, None]:
     """Provide test settings with temporary database."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_db_path = Path(temp_dir) / "test.db"
+    temp_dir = tempfile.mkdtemp()
+    # Use a unique database file for each test to avoid locking
+    import uuid
+    db_name = f"test_{uuid.uuid4().hex}.db"
+    temp_db_path = Path(temp_dir) / db_name
 
-        settings = Settings(
-            database_url=f"sqlite:///{temp_db_path}",
-            use_ssl=False,
-            log_level="ERROR",
-            session_timeout=3600,  # 1 hour for tests
-            claude_api_key="test-key",
-            max_concurrent_connections=5,
-            command_timeout=10,
-            environment="testing"
-        )
-        yield settings
+    settings = Settings(
+        database_url=f"sqlite:///{temp_db_path}",
+        use_ssl=False,
+        log_level="ERROR",
+        session_timeout=3600,  # 1 hour for tests
+        claude_api_key="test-key",
+        max_concurrent_connections=5,
+        command_timeout=60,
+        environment="testing"
+    )
+    
+    yield settings
+    
+    # Robust cleanup
+    import shutil
+    import time
+    import gc
+    
+    # Force garbage collection to release file handles
+    gc.collect()
+    
+    # Try to remove the directory with retries
+    max_retries = 3
+    for i in range(max_retries):
+        try:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            break
+        except PermissionError:
+            if i < max_retries - 1:
+                time.sleep(0.5)
+            else:
+                print(f"Warning: Could not clean up temp dir {temp_dir}")
 
 
 @pytest.fixture
@@ -63,12 +107,23 @@ async def async_client(test_settings: Settings) -> AsyncGenerator[AsyncClient, N
     """Create an async HTTP client for testing."""
     # Override settings for testing
     app.dependency_overrides[get_settings] = lambda: test_settings
+    
+    # Reset global database connection to ensure it picks up new settings
+    import src.database.connection
+    src.database.connection._db_connection = None
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
+    # Patch get_settings globally for direct calls and ensure lifespan
+    with patch('src.config.settings.get_settings', return_value=test_settings), \
+         patch('src.database.connection.get_settings', return_value=test_settings):
+        async with app.router.lifespan_context(app):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                yield ac
 
     # Clean up
     app.dependency_overrides.clear()
+    # Reset again to be safe
+    src.database.connection._db_connection = None
 
 
 @pytest.fixture
@@ -84,7 +139,8 @@ def mock_websocket():
     websocket.close = AsyncMock()
     websocket.client = ("127.0.0.1", 12345)
     websocket.scope = {"type": "websocket", "path": "/ws"}
-    return websocket
+    yield websocket
+    # No explicit cleanup needed for mock, but yield ensures consistency
 
 
 @pytest.fixture
@@ -152,8 +208,14 @@ def mock_claude_response() -> dict:
     }
 
 
+@pytest.fixture
+def authenticated_headers() -> dict:
+    """Return headers for authenticated requests."""
+    return {"Authorization": "Bearer test-token"}
+
+
 # Test markers for categorizing tests
-pytest_plugins = []
+
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""

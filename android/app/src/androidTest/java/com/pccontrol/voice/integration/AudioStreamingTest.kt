@@ -8,6 +8,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.pccontrol.voice.domain.services.AudioCaptureService
 
 /**
  * Integration tests for audio streaming functionality.
@@ -56,13 +57,13 @@ class AudioStreamingTest {
     fun testAudioCaptureStartsAndStops() = runBlocking {
         // Act: Initialize
         audioService.initialize()
-        
+
         // Act: Start recording
         audioService.startRecording()
 
         // Assert: Recording state (indirectly via flow or just no exception)
         // Since we don't expose state directly, we assume success if no exception
-        
+
         // Act: Stop recording
         audioService.stopRecording()
     }

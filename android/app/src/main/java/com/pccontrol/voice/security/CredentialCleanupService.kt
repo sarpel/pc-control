@@ -273,20 +273,12 @@ class CredentialCleanupService private constructor(
 
             // Clear voice commands (may contain sensitive transcripts)
             // Using deleteExpiredCommands with a future timestamp to delete all
-            database.voiceCommandDao().deleteExpiredCommands(System.currentTimeMillis() + 1000000000L)
+            database.commandHistoryDao().deleteExpiredCommands(System.currentTimeMillis() + 1000000000L)
             deleted.add("Voice command history")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning database credentials", e)
             errors.add("Database cleanup failed: ${e.message}")
-        }
-
-        return CleanupDetail(deleted.size, errors)
-    }
-            Log.d(TAG, "Database credential cleanup completed")
-        } catch (e: Exception) {
-            errors.add("Database cleanup error: ${e.message}")
-            Log.e(TAG, "Error during database cleanup", e)
         }
 
         return CleanupDetail(deleted.size, errors)

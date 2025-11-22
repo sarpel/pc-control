@@ -1,27 +1,32 @@
 package com.pccontrol.voice.data.repository
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
+import com.pccontrol.voice.data.database.AppDatabase
 import com.pccontrol.voice.data.models.DevicePairing
 import com.pccontrol.voice.data.models.PCConnection
-import com.pccontrol.voice.data.database.AppDatabase
-import com.pccontrol.voice.network.WebSocketClient
-import com.pccontrol.voice.services.WebSocketManager
 import com.pccontrol.voice.security.KeyStoreManager
+import com.pccontrol.voice.security.SecureConnectionHelper
+import com.pccontrol.voice.services.WebSocketManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.KeyFactory
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.UUID
+import javax.net.ssl.HttpsURLConnection
 
 /**
  * Repository for device pairing operations.
-
+ *
  * Handles:
  * - Pairing initiation with PC
  * - 6-digit code verification
@@ -37,10 +42,68 @@ class PairingRepository(
 ) {
     companion object {
         private const val TAG = "PairingRepository"
-        private const val PAIRING_ENDPOINT = "https://pc-ip:8443/api/pairing"
+        private const val PAIRING_ENDPOINT = "https://pc-ip:8765/api/pairing"
+        private const val P12_PASSWORD_KEY = "p12_password"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val secureConnectionHelper = SecureConnectionHelper(context)
+
+    // Generate and store secure P12 password
+    private fun getOrCreateP12Password(): CharArray {
+        val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+        val encryptedPassword = prefs.getString(P12_PASSWORD_KEY, null)
+
+        return if (encryptedPassword != null) {
+            // Decrypt existing password
+            val decrypted = keyStoreManager.decryptSensitiveData(encryptedPassword)
+            decrypted?.toCharArray() ?: generateAndStoreP12Password()
+        } else {
+            generateAndStoreP12Password()
+        }
+    }
+
+    private fun generateAndStoreP12Password(): CharArray {
+        // Generate strong random password
+        val password = UUID.randomUUID().toString() + UUID.randomUUID().toString()
+
+        // Encrypt and store
+        val encrypted = keyStoreManager.encryptSensitiveData(password)
+        if (encrypted != null) {
+            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+            prefs.edit().putString(P12_PASSWORD_KEY, encrypted).apply()
+        }
+
+        return password.toCharArray()
+    }
+
+    /**
+     * Create a secure HTTPS connection with proper validation.
+     */
+    private fun createSecureHttpsConnection(
+        urlString: String,
+        method: String = "GET",
+        trustAll: Boolean = false
+    ): HttpsURLConnection {
+        // Validate URL
+        if (!secureConnectionHelper.isValidUrl(urlString)) {
+            throw IllegalArgumentException("Geçersiz URL")
+        }
+
+        val connection = if (trustAll) {
+            secureConnectionHelper.createUnsafeConnection(urlString)
+        } else {
+            secureConnectionHelper.createSecureConnection(urlString)
+        }
+
+        connection.requestMethod = method
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.setRequestProperty("Accept", "application/json")
+        connection.connectTimeout = 10000
+        connection.readTimeout = 10000
+
+        return connection
+    }
 
     /**
      * Initiate pairing process with PC.
@@ -51,31 +114,34 @@ class PairingRepository(
         pcIpAddress: String
     ): Result<PairingInitiateResponse> {
         return withContext(Dispatchers.IO) {
+            // Validate IP address
+            if (!secureConnectionHelper.isValidIpAddress(pcIpAddress)) {
+                return@withContext Result.failure(Exception("Geçersiz IP adresi"))
+            }
+
+            var connection: HttpsURLConnection? = null
             try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/initiate")
+                val urlString = "${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/initiate"
+                // Use unsafe connection for initial pairing (we don't have CA yet)
+                connection = createSecureHttpsConnection(urlString, "POST", trustAll = true)
+
                 val request = PairingInitiateRequest(deviceName, deviceId)
                 val requestBody = json.encodeToString(request)
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
-
-                    // Write request body
-                    outputStream.use { it.write(requestBody.toByteArray()) }
-                }
+                connection.doOutput = true
+                connection.outputStream.use { it.write(requestBody.toByteArray()) }
 
                 val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.use {
+                        it.bufferedReader().readText()
+                    }
                     val response = json.decodeFromString<PairingInitiateResponse>(responseBody)
                     Log.i(TAG, "Pairing initiated: ${response.pairing_id}")
                     Result.success(response)
                 } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorBody = connection.errorStream?.use { it.bufferedReader().readText() }
                     val errorMessage = parseErrorMessage(responseCode, errorBody)
                     Log.e(TAG, "Pairing initiation failed: $errorMessage")
                     Result.failure(Exception(errorMessage))
@@ -83,10 +149,15 @@ class PairingRepository(
 
             } catch (e: IOException) {
                 Log.e(TAG, "Network error during pairing initiation", e)
-                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin.", e))
+                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin."))
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Invalid argument during pairing initiation", e)
+                Result.failure(Exception(e.message ?: "Geçersiz parametre"))
             } catch (e: Exception) {
                 Log.e(TAG, "Unexpected error during pairing initiation", e)
-                Result.failure(Exception("Beklenmedik hata: ${e.message}", e))
+                Result.failure(Exception("Beklenmedik hata"))
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -101,26 +172,33 @@ class PairingRepository(
         pcIpAddress: String
     ): Result<PairingVerifyResponse> {
         return withContext(Dispatchers.IO) {
+            // Validate IP address
+            if (!secureConnectionHelper.isValidIpAddress(pcIpAddress)) {
+                return@withContext Result.failure(Exception("Geçersiz IP adresi"))
+            }
+
+            var connection: HttpsURLConnection? = null
             try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/verify")
+                val urlString = "${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/verify"
+                // Use unsafe connection for verification (we receive CA here)
+                connection = createSecureHttpsConnection(urlString, "POST", trustAll = true)
+
                 val request = PairingVerifyRequest(pairingId, pairingCode, deviceId)
                 val requestBody = json.encodeToString(request)
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
-
-                    outputStream.use { it.write(requestBody.toByteArray()) }
-                }
+                connection.doOutput = true
+                connection.outputStream.use { it.write(requestBody.toByteArray()) }
 
                 val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.use {
+                        it.bufferedReader().readText()
+                    }
                     val response = json.decodeFromString<PairingVerifyResponse>(responseBody)
+
+                    // Initialize secure connection helper with CA cert for future connections
+                    secureConnectionHelper.initializeWithCACertificate(response.ca_certificate)
 
                     // Store certificates securely
                     val stored = storeCertificatesSecurely(
@@ -132,11 +210,12 @@ class PairingRepository(
 
                     if (stored) {
                         // Store auth token (encrypt + persist)
-                        val encryptedToken = keyStoreManager.encryptSensitiveData(response.auth_token)
+                        val encryptedToken =
+                            keyStoreManager.encryptSensitiveData(response.auth_token)
                         val tokenStored = encryptedToken?.let { token ->
-                            val prefs = context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
-                            prefs.edit().putString("auth_token_$deviceId", token).apply()
-                            true
+                            val prefs =
+                                context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
+                            prefs.edit().putString("auth_token_$deviceId", token).commit()
                         } ?: false
 
                         if (tokenStored) {
@@ -149,7 +228,7 @@ class PairingRepository(
                         Result.failure(Exception("Sertifikalar güvenli şekilde saklanamadı"))
                     }
                 } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorBody = connection.errorStream?.use { it.bufferedReader().readText() }
                     val errorMessage = parseErrorMessage(responseCode, errorBody)
                     Log.e(TAG, "Pairing verification failed: $errorMessage")
                     Result.failure(Exception(errorMessage))
@@ -157,10 +236,15 @@ class PairingRepository(
 
             } catch (e: IOException) {
                 Log.e(TAG, "Network error during pairing verification", e)
-                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin.", e))
+                Result.failure(Exception("PC'ye bağlanılamadı. Ağ bağlantısını kontrol edin."))
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Invalid argument during pairing verification", e)
+                Result.failure(Exception(e.message ?: "Geçersiz parametre"))
             } catch (e: Exception) {
                 Log.e(TAG, "Unexpected error during pairing verification", e)
-                Result.failure(Exception("Beklenmedik hata: ${e.message}", e))
+                Result.failure(Exception("Beklenmedik hata"))
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -173,29 +257,37 @@ class PairingRepository(
         pcIpAddress: String
     ): Result<PairingStatusResponse> {
         return withContext(Dispatchers.IO) {
+            // Validate IP address
+            if (!secureConnectionHelper.isValidIpAddress(pcIpAddress)) {
+                return@withContext Result.failure(Exception("Geçersiz IP adresi"))
+            }
+
+            var connection: HttpsURLConnection? = null
             try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status?device_id=$deviceId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/json")
-                }
+                val urlString = "${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status?device_id=$deviceId"
+                // This checks existing pairing, should be secure if we have certs, but might be used to check if we CAN pair?
+                // Assuming this is used for post-pairing check, so keep it secure.
+                connection = createSecureHttpsConnection(urlString, "GET")
 
                 val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.use {
+                        it.bufferedReader().readText()
+                    }
                     val response = json.decodeFromString<PairingStatusResponse>(responseBody)
                     Result.success(response)
                 } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorBody = connection.errorStream?.use { it.bufferedReader().readText() }
                     val errorMessage = parseErrorMessage(responseCode, errorBody)
                     Result.failure(Exception(errorMessage))
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error getting pairing status", e)
-                Result.failure(Exception("Durum bilgisi alınamadı", e))
+                Result.failure(Exception("Durum bilgisi alınamadı"))
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -208,28 +300,35 @@ class PairingRepository(
         pcIpAddress: String
     ): Result<PairingStatusResponse> {
         return withContext(Dispatchers.IO) {
+            // Validate IP address
+            if (!secureConnectionHelper.isValidIpAddress(pcIpAddress)) {
+                return@withContext Result.failure(Exception("Geçersiz IP adresi"))
+            }
+
+            var connection: HttpsURLConnection? = null
             try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status/$pairingId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/json")
-                }
+                val urlString = "${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/status/$pairingId"
+                // Polling during pairing process -> must be unsafe as we have no CA yet
+                connection = createSecureHttpsConnection(urlString, "GET", trustAll = true)
 
                 val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().readText()
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.use {
+                        it.bufferedReader().readText()
+                    }
                     val response = json.decodeFromString<PairingStatusResponse>(responseBody)
                     Result.success(response)
                 } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorBody = connection.errorStream?.use { it.bufferedReader().readText() }
                     val errorMessage = parseErrorMessage(responseCode, errorBody)
                     Result.failure(Exception(errorMessage))
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking pairing status", e)
                 Result.failure(e)
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -242,13 +341,15 @@ class PairingRepository(
         pcIpAddress: String
     ): Result<Boolean> {
         return withContext(Dispatchers.IO) {
+            // Validate IP address
+            if (!secureConnectionHelper.isValidIpAddress(pcIpAddress)) {
+                return@withContext Result.failure(Exception("Geçersiz IP adresi"))
+            }
+
+            var connection: HttpsURLConnection? = null
             try {
-                val url = URL("${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/$deviceId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "DELETE"
-                    setRequestProperty("Accept", "application/json")
-                }
+                val urlString = "${PAIRING_ENDPOINT.replace("pc-ip", pcIpAddress)}/$deviceId"
+                connection = createSecureHttpsConnection(urlString, "DELETE")
 
                 val responseCode = connection.responseCode
 
@@ -257,14 +358,16 @@ class PairingRepository(
                     removeStoredData(deviceId)
                     Result.success(true)
                 } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText()
+                    val errorBody = connection.errorStream?.use { it.bufferedReader().readText() }
                     val errorMessage = parseErrorMessage(responseCode, errorBody)
                     Result.failure(Exception(errorMessage))
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error revoking pairing", e)
-                Result.failure(Exception("Eşleştirme iptal edilemedi", e))
+                Result.failure(Exception("Eşleştirme iptal edilemedi"))
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -275,7 +378,7 @@ class PairingRepository(
     suspend fun establishSecureConnection(
         deviceId: String,
         pcIpAddress: String,
-        port: Int = 8443
+        port: Int = 8765
     ): Result<Boolean> {
         return try {
             // Get stored auth token
@@ -308,7 +411,9 @@ class PairingRepository(
             if (connectResult.isSuccess) {
                 Result.success(true)
             } else {
-                Result.failure(connectResult.exceptionOrNull() ?: Exception("WebSocket bağlantısı kurulamadı"))
+                Result.failure(
+                    connectResult.exceptionOrNull() ?: Exception("WebSocket bağlantısı kurulamadı")
+                )
             }
 
         } catch (e: Exception) {
@@ -378,6 +483,9 @@ class PairingRepository(
             // Store private key (encrypted)
             val encryptedKey = keyStoreManager.encryptSensitiveData(clientPrivateKey)
 
+            // Save to P12 file for WebSocketClient
+            saveP12Keystore(caCertificate, clientCertificate, clientPrivateKey)
+
             encryptedKey != null
         } catch (e: Exception) {
             Log.e(TAG, "Error storing certificates", e)
@@ -393,7 +501,7 @@ class PairingRepository(
             // Store in database
             val entity = connection.toEntity()
             appDatabase.pcConnectionDao().insertConnection(entity)
-            
+
             // Also store in SharedPreferences for legacy/backup (optional)
             val connectionJson = json.encodeToString(connection)
             val prefs = context.getSharedPreferences("pc_connections", Context.MODE_PRIVATE)
@@ -410,9 +518,9 @@ class PairingRepository(
         try {
             // Remove from database
             // Note: deviceId here is likely the connectionId or related
-            // If deviceId is connectionId:
-            appDatabase.pcConnectionDao().deleteConnection(deviceId)
-            
+            // Using deleteConnectionById since deviceId is a String (connectionId)
+            appDatabase.pcConnectionDao().deleteConnectionById(deviceId)
+
             removeStoredData(deviceId)
         } catch (e: Exception) {
             Log.e(TAG, "Error removing pairing", e)
@@ -446,6 +554,61 @@ class PairingRepository(
             HttpURLConnection.HTTP_GONE -> "Eşleştirme süresi dolmuş"
             HttpURLConnection.HTTP_INTERNAL_ERROR -> "Sunucu hatası"
             else -> "Bilinmeyen hata ($responseCode)"
+        }
+    }
+
+    private fun saveP12Keystore(caCertPem: String, clientCertPem: String, privateKeyPem: String) {
+        try {
+            // 1. Parse Private Key
+            val privateKeyContent = privateKeyPem
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replace("\n", "")
+                .replace(" ", "")
+            val privateKeyBytes = Base64.decode(privateKeyContent, Base64.DEFAULT)
+            val keySpec = PKCS8EncodedKeySpec(privateKeyBytes)
+            val keyFactory = KeyFactory.getInstance("RSA")
+            val privateKey = keyFactory.generatePrivate(keySpec)
+
+            // 2. Parse Certificates
+            val certFactory = CertificateFactory.getInstance("X.509")
+
+            val caCertContent = caCertPem
+                .replace("-----BEGIN CERTIFICATE-----", "")
+                .replace("-----END CERTIFICATE-----", "")
+                .replace("\n", "")
+            val caCertBytes = Base64.decode(caCertContent, Base64.DEFAULT)
+            val caCert =
+                certFactory.generateCertificate(caCertBytes.inputStream()) as X509Certificate
+
+            val clientCertContent = clientCertPem
+                .replace("-----BEGIN CERTIFICATE-----", "")
+                .replace("-----END CERTIFICATE-----", "")
+                .replace("\n", "")
+            val clientCertBytes = Base64.decode(clientCertContent, Base64.DEFAULT)
+            val clientCert =
+                certFactory.generateCertificate(clientCertBytes.inputStream()) as X509Certificate
+
+            // 3. Create PKCS12 KeyStore
+            val keyStore = KeyStore.getInstance("PKCS12")
+            keyStore.load(null, null)
+
+            // 4. Get secure password
+            val password = getOrCreateP12Password()
+
+            // 5. Set Key Entry with Chain
+            val chain = arrayOf(clientCert, caCert)
+            keyStore.setKeyEntry("client", privateKey, password, chain)
+
+            // 6. Save to File
+            context.openFileOutput("client.p12", Context.MODE_PRIVATE).use { fos ->
+                keyStore.store(fos, password)
+            }
+
+            Log.i(TAG, "P12 KeyStore saved successfully")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save P12 KeyStore", e)
         }
     }
 }

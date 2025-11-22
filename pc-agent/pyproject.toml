@@ -206,6 +206,7 @@ python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
     "--strict-config",
+    "--timeout=60",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

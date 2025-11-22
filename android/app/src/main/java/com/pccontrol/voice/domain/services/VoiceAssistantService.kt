@@ -151,7 +151,9 @@ class VoiceAssistantService : Service() {
             startVoiceAssistant()
         }
         // Force reconnection attempt if needed
-        webSocketManager?.connect()
+        serviceScope.launch {
+            webSocketManager?.connect()
+        }
     }
 
     override fun onDestroy() {
@@ -579,5 +581,4 @@ class VoiceAssistantService : Service() {
     fun isConnected(): Boolean = isConnected
     fun isRunning(): Boolean = isRunning
     fun isListening(): Boolean = isListening
-}
 }

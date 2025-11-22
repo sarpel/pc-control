@@ -80,6 +80,11 @@ class ConnectionManager:
         self._cleanup_task = None
         self._cleanup_started = False
 
+    async def initialize(self):
+        """Initialize the connection manager and start background tasks."""
+        self._start_cleanup_task()
+        logger.info("Connection manager initialized")
+
     def _start_cleanup_task(self):
         """Start the background cleanup task if event loop is running."""
         if self._cleanup_task is None and not self._cleanup_started:

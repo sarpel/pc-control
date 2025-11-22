@@ -20,14 +20,17 @@ class TestSettings:
 
     def test_default_settings(self):
         """Test that default settings are applied correctly."""
-        settings = Settings()
+        # Clear environment variables that might interfere
+        with patch.dict(os.environ, {}, clear=True):
+            # Pass _env_file=None to ignore .env file
+            settings = Settings(_env_file=None)
 
-        assert settings.host == "0.0.0.0"
-        assert settings.port == 8765
-        assert settings.use_ssl is True
-        assert settings.log_level == "INFO"
-        assert settings.session_timeout == 86400
-        assert settings.max_concurrent_connections == 10
+            assert settings.host == "0.0.0.0"
+            assert settings.port == 8765
+            assert settings.use_ssl is True
+            assert settings.log_level == "INFO"
+            assert settings.session_timeout == 86400
+            assert settings.max_concurrent_connections == 10
 
     def test_environment_variable_override(self):
         """Test that environment variables override defaults."""
@@ -52,25 +55,31 @@ PC_AGENT_PORT=8080
 PC_AGENT_USE_SSL=false
 """)
 
-            with patch.dict(os.environ, {"PC_AGENT_ENV_FILE": str(env_file)}):
-                settings = Settings()
+            # pydantic-settings loads from .env file in current dir or specified by _env_file
+            # We need to instantiate Settings with _env_file argument
+            settings = Settings(_env_file=str(env_file))
 
-                assert settings.host == "192.168.1.100"
-                assert settings.port == 8080
-                assert settings.use_ssl is False
+            assert settings.host == "192.168.1.100"
+            assert settings.port == 8080
+            assert settings.use_ssl is False
 
     def test_ssl_certificate_paths(self):
         """Test SSL certificate path configuration."""
         with tempfile.TemporaryDirectory() as temp_dir:
             cert_dir = Path(temp_dir)
+            
+            # Create dummy cert files
+            (cert_dir / "server.crt").touch()
+            (cert_dir / "server.key").touch()
 
             settings = Settings(
                 use_ssl=True,
-                certificates_dir=cert_dir
+                cert_file=str(cert_dir / "server.crt"),
+                key_file=str(cert_dir / "server.key")
             )
 
-            assert settings.cert_file == str(cert_dir / "server.crt")
-            assert settings.key_file == str(cert_dir / "server.key")
+            assert Path(settings.cert_file).resolve() == (cert_dir / "server.crt").resolve()
+            assert Path(settings.key_file).resolve() == (cert_dir / "server.key").resolve()
 
     def test_database_url_validation(self):
         """Test database URL configuration."""

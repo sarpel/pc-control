@@ -20,6 +20,9 @@ import kotlin.random.Random
  * UI state for device pairing screen
  */
 data class DevicePairingUiState(
+    val ipAddress: String = "",
+    val pairingId: String? = null,
+    val isInitiated: Boolean = false,
     val pairingCode: String = "",
     val pairingCodeError: String? = null,
     val generatedPairingCode: String? = null,
@@ -42,6 +45,65 @@ class DevicePairingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DevicePairingUiState())
     val uiState: StateFlow<DevicePairingUiState> = _uiState.asStateFlow()
 
+    fun updateIpAddress(ip: String) {
+        _uiState.value = _uiState.value.copy(
+            ipAddress = ip,
+            statusMessage = "",
+            isError = false
+        )
+    }
+
+    fun initiatePairing() {
+        val ip = _uiState.value.ipAddress
+        if (ip.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                statusMessage = "Lütfen IP adresi girin",
+                isError = true
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                statusMessage = "PC'ye bağlanılıyor...",
+                isError = false
+            )
+
+            try {
+                val deviceId = android.provider.Settings.Secure.getString(
+                    context.contentResolver, 
+                    android.provider.Settings.Secure.ANDROID_ID
+                )
+
+                val result = pairingRepository.initiatePairing(
+                    deviceName = android.os.Build.MODEL,
+                    deviceId = deviceId,
+                    pcIpAddress = ip
+                )
+
+                if (result.isSuccess) {
+                    val response = result.getOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isInitiated = true,
+                        pairingId = response?.pairing_id,
+                        statusMessage = "Bağlantı başarılı. Lütfen PC loglarında görünen kodu girin.",
+                        isError = false
+                    )
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Bağlantı başarısız")
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    statusMessage = "Bağlantı hatası: ${e.message}",
+                    isError = true
+                )
+            }
+        }
+    }
+
     fun updatePairingCode(code: String) {
         // Only allow digits, max 6 characters
         val filteredCode = code.filter { it.isDigit() }.take(6)
@@ -57,6 +119,7 @@ class DevicePairingViewModel @Inject constructor(
     }
 
     fun generatePairingCode() {
+        // Deprecated/Unused in new flow but kept for compatibility if needed
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
@@ -125,12 +188,11 @@ class DevicePairingViewModel @Inject constructor(
             )
 
             try {
-                // Get IP and PairingID from navigation arguments
-                val ip = savedStateHandle.get<String>("ipAddress")
-                val pairingId = savedStateHandle.get<String>("pairingId")
+                val ip = _uiState.value.ipAddress
+                val pairingId = _uiState.value.pairingId
                 
-                if (ip == null || pairingId == null) {
-                    throw Exception("Missing pairing information")
+                if (ip.isBlank() || pairingId == null) {
+                    throw Exception("Eşleştirme bilgileri eksik. Lütfen önce bağlanın.")
                 }
 
                 val deviceId = android.provider.Settings.Secure.getString(
@@ -146,12 +208,22 @@ class DevicePairingViewModel @Inject constructor(
                 )
 
                 if (result.isSuccess) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        statusMessage = "Eşleştirme başarılı! PC'ye bağlandı.",
-                        isError = false
+                    // Establish secure connection immediately after pairing
+                    val connectionResult = pairingRepository.establishSecureConnection(
+                        deviceId = deviceId,
+                        pcIpAddress = ip
                     )
-                    // Navigation should be handled by the screen composable observing this state
+
+                    if (connectionResult.isSuccess) {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            statusMessage = "Eşleştirme başarılı! PC'ye bağlandı.",
+                            isError = false
+                        )
+                        // Navigation should be handled by the screen composable observing this state
+                    } else {
+                        throw connectionResult.exceptionOrNull() ?: Exception("Bağlantı kurulamadı")
+                    }
                 } else {
                     throw result.exceptionOrNull() ?: Exception("Pairing failed")
                 }

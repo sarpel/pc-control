@@ -12,18 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from api.middleware import (
+from src.api.middleware import (
     setup_middleware,
     rate_limiter,
     logging_middleware,
     error_handler_middleware
 )
-from api.rest_endpoints import pairing_router, wol_router
-from api.websocket_server import router as websocket_router
-from database.connection import initialize_database, close_database
-from services.certificate_service import CertificateService
-from services.connection_manager import ConnectionManager
-from config.settings import get_settings
+from src.api.rest_endpoints import pairing_router, wol_router
+from src.api.websocket_server import router as websocket_router
+from src.database.connection import initialize_database, close_database
+from src.services.certificate_service import CertificateService
+from src.services.connection_manager import ConnectionManager
+from src.config.settings import get_settings
 
 # Configure logging
 logging.basicConfig(
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
 
     try:
         # Close connection manager
-        await connection_manager.cleanup()
+        await connection_manager.shutdown()
 
         # Close database
         await close_database()
@@ -109,10 +109,15 @@ app.middleware("http")(error_handler_middleware)
 setup_middleware(app)
 
 
+from fastapi.exceptions import RequestValidationError
+from src.api.endpoints import browser, system
+
 # Include routers
 app.include_router(pairing_router)
 app.include_router(wol_router)
 app.include_router(websocket_router)
+app.include_router(browser.router)
+app.include_router(system.router)
 
 
 # Root endpoint
@@ -248,6 +253,22 @@ async def get_system_status():
 
 
 # Error handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors."""
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": {
+                "type": "validation_error",
+                "message": str(exc),
+                "status_code": 400,
+                "path": str(request.url.path)
+            }
+        }
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions."""

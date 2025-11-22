@@ -56,121 +56,119 @@ fun DevicePairingScreen(
                 fontWeight = FontWeight.Medium
             )
 
-            // Step 1
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Numbers,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "1. PC Agent'i Başlatın",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    Text(
-                        text = "PC'nizde PC Voice Controller uygulamasını açın ve eşleştirme modunu başlatın.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            // Step 2
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.QrCodeScanner,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "2. Eşleştirme Kodunu Girin",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    Text(
-                        text = "PC ekranında görünen 6 haneli eşleştirme kodunu girin:",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    // Pairing code input
-                    OutlinedTextField(
-                        value = uiState.pairingCode,
-                        onValueChange = viewModel::updatePairingCode,
-                        label = { Text("Eşleştirme Kodu") },
-                        placeholder = { Text("123456") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        isError = uiState.pairingCodeError != null,
-                        supportingText = uiState.pairingCodeError?.let {
-                            { Text(it) }
-                        }
-                    )
-                }
-            }
-
-            // Step 3 - Show pairing code if initiated
-            val pairingCode = uiState.generatedPairingCode
-            if (uiState.showPairingCode && pairingCode != null) {
-                PairingCodeCard(
-                    pairingCode = pairingCode,
-                    onCopyCode = viewModel::copyPairingCode,
+            // Step 1: Enter IP Address
+            if (!uiState.isInitiated) {
+                Card(
                     modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = viewModel::generatePairingCode,
-                    modifier = Modifier.weight(1f),
-                    enabled = !uiState.isLoading
                 ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Computer,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "1. PC IP Adresini Girin",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        Text(
+                            text = "PC'nizin IP adresini girin (örn: 192.168.1.100)",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                    } else {
-                        Text("Kod Oluştur")
+
+                        OutlinedTextField(
+                            value = uiState.ipAddress,
+                            onValueChange = viewModel::updateIpAddress,
+                            label = { Text("IP Adresi") },
+                            placeholder = { Text("192.168.1.x") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        Button(
+                            onClick = viewModel::initiatePairing,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = uiState.ipAddress.isNotBlank() && !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Bağlan ve Kod İste")
+                            }
+                        }
                     }
                 }
+            }
 
-                Button(
-                    onClick = viewModel::startPairing,
-                    modifier = Modifier.weight(1f),
-                    enabled = uiState.pairingCode.length == 6 && !uiState.isLoading
+            // Step 2: Enter Pairing Code (Only visible after initiation)
+            if (uiState.isInitiated) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "2. Eşleştirme Kodunu Girin",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        Text(
+                            text = "PC loglarında görünen 6 haneli eşleştirme kodunu girin:",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                    } else {
-                        Text("Eşleştir")
+
+                        // Pairing code input
+                        OutlinedTextField(
+                            value = uiState.pairingCode,
+                            onValueChange = viewModel::updatePairingCode,
+                            label = { Text("Eşleştirme Kodu") },
+                            placeholder = { Text("123456") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            isError = uiState.pairingCodeError != null,
+                            supportingText = uiState.pairingCodeError?.let {
+                                { Text(it) }
+                            }
+                        )
+
+                        Button(
+                            onClick = viewModel::startPairing,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = uiState.pairingCode.length == 6 && !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Eşleştir")
+                            }
+                        }
                     }
                 }
             }

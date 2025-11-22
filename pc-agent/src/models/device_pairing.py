@@ -68,6 +68,7 @@ class DevicePairing:
     auth_token_hash: Optional[str] = None
     token_expires_at: Optional[datetime] = None
     paired_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
 
     def __post_init__(self) -> None:
         """Validate device pairing data after initialization."""

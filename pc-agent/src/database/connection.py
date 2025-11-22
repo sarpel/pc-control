@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, Union
 import aiosqlite
 
-from config.settings import get_settings
-from database.schema import DATABASE_SCHEMA
+from src.config.settings import get_settings
+from src.database.schema import DATABASE_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,6 @@ class DatabaseConnection:
             conn.commit()
 
             logger.debug("Database schema created successfully")
-
         except Exception as e:
             conn.rollback()
             raise
@@ -219,7 +218,8 @@ class DatabaseConnection:
                 logger.debug("Reusing connection from pool")
             else:
                 # Create new connection
-                conn = await aiosqlite.connect(self.db_path)
+                # Set timeout to 30 seconds to handle concurrent writes in tests
+                conn = await aiosqlite.connect(self.db_path, timeout=30.0)
                 conn.row_factory = aiosqlite.Row
                 # Enable WAL mode for better concurrency
                 await conn.execute("PRAGMA journal_mode=WAL")
@@ -461,18 +461,14 @@ class DatabaseConnection:
             return {"error": str(e), "timestamp": datetime.utcnow().isoformat()}
 
     async def close(self) -> None:
-        """Close all connections and cleanup resources."""
-        async with self._pool_lock:
-            # Close all connections in pool
+        """Close all database connections."""
+        try:
+            # Close remaining connections
             for conn in self._connection_pool:
                 await conn.close()
             self._connection_pool.clear()
-
-            # Cancel migration job if running
-            if hasattr(self, '_migration_job') and self._migration_job:
-                self._migration_job.cancel()
-
-        logger.info("Database connection manager closed")
+        except Exception as e:
+            logger.error(f"Error closing database connections: {e}")
 
     def __del__(self):
         """Cleanup when object is destroyed."""

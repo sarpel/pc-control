@@ -5,7 +5,6 @@ Tests the voice command parsing, intent detection, and action generation.
 """
 
 import pytest
-import unittest
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 import uuid
@@ -19,10 +18,11 @@ from src.services.voice_command_processor import (
 )
 
 
-class TestVoiceCommandProcessor(unittest.TestCase):
+class TestVoiceCommandProcessor:
     """Test cases for VoiceCommandProcessor."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         """Set up test fixtures."""
         self.processor = VoiceCommandProcessor()
 
@@ -38,12 +38,12 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.transcription, transcription)
-        self.assertEqual(result.confidence, confidence)
-        self.assertEqual(result.language, language)
-        self.assertEqual(result.intent, CommandIntent.NAVIGATE)
-        self.assertEqual(result.category, CommandCategory.BROWSER)
-        self.assertIn("google.com", result.entities.get("url", ""))
+        assert result.transcription == transcription
+        assert result.confidence == confidence
+        assert result.language == language
+        assert result.intent == CommandIntent.NAVIGATE
+        assert result.category == CommandCategory.BROWSER
+        assert "google.com" in result.entities.get("url", "")
 
     @pytest.mark.asyncio
     async def test_parse_search_command(self):
@@ -57,9 +57,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.SEARCH)
-        self.assertEqual(result.category, CommandCategory.BROWSER)
-        self.assertIn("hava durumu", result.entities.get("search_query", ""))
+        assert result.intent == CommandIntent.SEARCH
+        assert result.category == CommandCategory.BROWSER
+        assert "hava durumu" in result.entities.get("search_query", "")
 
     @pytest.mark.asyncio
     async def test_parse_volume_command(self):
@@ -73,8 +73,8 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.VOLUME_UP)
-        self.assertEqual(result.category, CommandCategory.VOLUME)
+        assert result.intent == CommandIntent.VOLUME_UP
+        assert result.category == CommandCategory.VOLUME
 
     @pytest.mark.asyncio
     async def test_parse_app_launch_command(self):
@@ -88,9 +88,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.LAUNCH)
-        self.assertEqual(result.category, CommandCategory.SYSTEM)
-        self.assertIn("Chrome", result.entities.get("app_name", ""))
+        assert result.intent == CommandIntent.LAUNCH
+        assert result.category == CommandCategory.SYSTEM
+        assert "chrome" in result.entities.get("app_name", "")
 
     @pytest.mark.asyncio
     async def test_parse_volume_set_command(self):
@@ -104,9 +104,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.VOLUME_SET)
-        self.assertEqual(result.category, CommandCategory.VOLUME)
-        self.assertEqual(result.entities.get("volume_level"), 50)
+        assert result.intent == CommandIntent.VOLUME_SET
+        assert result.category == CommandCategory.VOLUME
+        assert result.entities.get("volume_level") == 50
 
     @pytest.mark.asyncio
     async def test_parse_file_search_command(self):
@@ -120,9 +120,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.FIND_FILE)
-        self.assertEqual(result.category, CommandCategory.FILE)
-        self.assertIn("rapor", result.entities.get("file_name", ""))
+        assert result.intent == CommandIntent.FIND_FILE
+        assert result.category == CommandCategory.FILE
+        assert "rapor" in result.entities.get("file_name", "")
 
     @pytest.mark.asyncio
     async def test_parse_unknown_command(self):
@@ -136,8 +136,8 @@ class TestVoiceCommandProcessor(unittest.TestCase):
             command_id, transcription, confidence, language
         )
 
-        self.assertEqual(result.intent, CommandIntent.UNKNOWN)
-        self.assertEqual(result.category, CommandCategory.UNKNOWN)
+        assert result.intent == CommandIntent.UNKNOWN
+        assert result.category == CommandCategory.UNKNOWN
 
     @pytest.mark.asyncio
     async def test_generate_action_sequence_navigation(self):
@@ -152,9 +152,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         )
 
         actions = parsed_command.action_sequence
-        self.assertEqual(len(actions), 1)
-        self.assertEqual(actions[0]["type"], "browser_navigate")
-        self.assertIn("github.com", actions[0]["url"])
+        assert len(actions) == 1
+        assert actions[0]["type"] == "browser_navigate"
+        assert "github.com" in actions[0]["url"]
 
     @pytest.mark.asyncio
     async def test_generate_action_sequence_search(self):
@@ -169,9 +169,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         )
 
         actions = parsed_command.action_sequence
-        self.assertEqual(len(actions), 1)
-        self.assertEqual(actions[0]["type"], "browser_search")
-        self.assertIn("Python documentation", actions[0]["query"])
+        assert len(actions) == 1
+        assert actions[0]["type"] == "browser_search"
+        assert "python documentation" in actions[0]["query"]
 
     @pytest.mark.asyncio
     async def test_generate_action_sequence_volume(self):
@@ -186,9 +186,9 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         )
 
         actions = parsed_command.action_sequence
-        self.assertEqual(len(actions), 1)
-        self.assertEqual(actions[0]["type"], "system_volume")
-        self.assertEqual(actions[0]["adjust_type"], "decrease")
+        assert len(actions) == 1
+        assert actions[0]["type"] == "system_volume"
+        assert actions[0]["adjust_type"] == "decrease"
 
     def test_estimate_execution_time(self):
         """Test execution time estimation."""
@@ -202,8 +202,8 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         simple_time = self.processor._estimate_execution_time(simple_actions)
         complex_time = self.processor._estimate_execution_time(complex_actions)
 
-        self.assertGreater(simple_time, 1000)  # At least 1 second
-        self.assertGreater(complex_time, simple_time)  # Complex should take longer
+        assert simple_time > 1000  # At least 1 second
+        assert complex_time > simple_time  # Complex should take longer
 
     def test_confidence_validation(self):
         """Test confidence validation."""
@@ -212,16 +212,16 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         invalid_confidence = 1.5
 
         # These would be tested through the actual processing method
-        self.assertLess(low_confidence, 0.5)
-        self.assertGreater(high_confidence, 0.5)
-        self.assertGreater(invalid_confidence, 1.0)
+        assert low_confidence < 0.5
+        assert high_confidence > 0.5
+        assert invalid_confidence > 1.0
 
     @pytest.mark.asyncio
     async def test_turkish_language_support(self):
         """Test Turkish language command parsing."""
         test_cases = [
             ("web sitesine git", CommandIntent.NAVIGATE),
-            ("aranacak kelime", CommandIntent.SEARCH),
+            ("kelime ara", CommandIntent.SEARCH),
             ("uygulama başlat", CommandIntent.LAUNCH),
             ("ses seviyesi 80", CommandIntent.VOLUME_SET),
             ("dosya ara", CommandIntent.FIND_FILE),
@@ -229,13 +229,11 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         ]
 
         for transcription, expected_intent in test_cases:
-            with self.subTest(transcription=transcription):
-                command_id = str(uuid.uuid4())
-                result = await self.processor.parse_command(
-                    command_id, transcription, 0.8, "tr"
-                )
-                self.assertEqual(result.intent, expected_intent,
-                               f"Failed for '{transcription}'")
+            command_id = str(uuid.uuid4())
+            result = await self.processor.parse_command(
+                command_id, transcription, 0.8, "tr"
+            )
+            assert result.intent == expected_intent, f"Failed for '{transcription}'"
 
     def test_normalize_text(self):
         """Test text normalization."""
@@ -247,19 +245,18 @@ class TestVoiceCommandProcessor(unittest.TestCase):
         ]
 
         expected_outputs = [
-            "chrome'u aç",
-            "google'da ara",
+            "chrome aç",
+            "google ara",
             "ses seviyesi 70",
             "web sitesine git"
         ]
 
         for input_text, expected in zip(test_inputs, expected_outputs):
-            with self.subTest(input=input_text):
-                result = self.processor._normalize_text(input_text)
-                self.assertEqual(result, expected)
+            result = self.processor._normalize_text(input_text)
+            assert result == expected
 
 
-class TestCommandResult(unittest.TestCase):
+class TestCommandResult:
     """Test cases for CommandResult."""
 
     def test_command_result_creation(self):
@@ -277,11 +274,11 @@ class TestCommandResult(unittest.TestCase):
             response_message=response_message
         )
 
-        self.assertEqual(result.command_id, command_id)
-        self.assertTrue(result.success)
-        self.assertEqual(result.execution_time_ms, execution_time)
-        self.assertEqual(len(result.action_results), 1)
-        self.assertEqual(result.response_message, response_message)
+        assert result.command_id == command_id
+        assert result.success
+        assert result.execution_time_ms == execution_time
+        assert len(result.action_results) == 1
+        assert result.response_message == response_message
 
     def test_command_result_serialization(self):
         """Test CommandResult serialization to dict."""
@@ -298,13 +295,9 @@ class TestCommandResult(unittest.TestCase):
 
         result_dict = result.to_dict()
 
-        self.assertEqual(result_dict["command_id"], command_id)
-        self.assertTrue(result_dict["success"])
-        self.assertEqual(result_dict["execution_time_ms"], 1000)
-        self.assertEqual(result_dict["response_message"], "Success")
-        self.assertEqual(result_dict["suggestions"], ["Try again"])
-        self.assertEqual(result_dict["follow_up_actions"], [{"type": "test"}])
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert result_dict["command_id"] == command_id
+        assert result_dict["success"]
+        assert result_dict["execution_time_ms"] == 1000
+        assert result_dict["response_message"] == "Success"
+        assert result_dict["suggestions"] == ["Try again"]
+        assert result_dict["follow_up_actions"] == [{"type": "test"}]

@@ -11,7 +11,7 @@ import time
 from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Callable
 from urllib.parse import parse_qs
 
 import jwt
@@ -19,17 +19,17 @@ from fastapi import HTTPException, Request, status, WebSocket
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import RequestResponseEndpoint, BaseHTTPMiddleware
 from starlette.responses import Response, JSONResponse
 from starlette.types import ASGIApp
 
-from config.settings import get_settings
-from services.connection_manager import ConnectionManager
+from src.config.settings import get_settings
+from src.services.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
 
-class MTLSMiddleware:
+class MTLSMiddleware(BaseHTTPMiddleware):
     """
     Middleware for mutual TLS (mTLS) authentication.
 
@@ -37,79 +37,15 @@ class MTLSMiddleware:
     information from certificate subject and extensions.
     """
 
-    def __init__(self, app: ASGIApp, ca_cert_path: str):
-        self.app = app
+    def __init__(self, app: ASGIApp, ca_cert_path: str) -> None:
+        super().__init__(app)
         self.ca_cert_path = Path(ca_cert_path)
         self.connection_manager = ConnectionManager()
         self._load_ca_certificate()
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        # Convert ASGI scope to Request object for compatibility
-        request = Request(scope, receive)
-
-        try:
-            # Extract client certificate from request
-            client_cert = self._extract_client_certificate(request)
-
-            if not client_cert:
-                response = JSONResponse(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    content={"detail": "Client certificate required"}
-                )
-                await response(scope, receive, send)
-                return
-
-            # Verify client certificate against CA
-            if not self._verify_client_certificate(client_cert):
-                response = JSONResponse(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    content={"detail": "Invalid client certificate"}
-                )
-                await response(scope, receive, send)
-                return
-
-            # Extract device information from certificate
-            device_info = self._extract_device_info(client_cert)
-
-            # Add device info to request state
-            scope["state"] = getattr(scope, "state", {})
-            scope["state"]["client_certificate"] = client_cert
-            scope["state"]["device_info"] = device_info
-
-            await self.app(scope, receive, send)
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"mTLS middleware error: {e}")
-            response = JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "Authentication error"}
-            )
-            await response(scope, receive, send)
-
-    def _load_ca_certificate(self):
-        """Load the CA certificate for client certificate verification."""
-        try:
-            with open(self.ca_cert_path, "rb") as f:
-                self.ca_cert_data = f.read()
-            logger.info(f"CA certificate loaded from {self.ca_cert_path}")
-        except Exception as e:
-            logger.error(f"Failed to load CA certificate: {e}")
-            raise
-
-    def _create_ssl_context(self) -> ssl.SSLContext:
-        """Create SSL context with mTLS verification."""
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.verify_mode = ssl.CERT_REQUIRED
-        context.load_verify_locations(self.ca_cert_path)
-        return context
-
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """
         Process incoming request with mTLS verification.
 
@@ -120,6 +56,10 @@ class MTLSMiddleware:
         Returns:
             Response from next middleware
         """
+        # Skip mTLS for pairing endpoints
+        if request.url.path.startswith("/api/pairing") or request.url.path.startswith("/api/v1/pairing"):
+            return await call_next(request)
+
         try:
             # Extract client certificate from request
             client_cert = self._extract_client_certificate(request)
@@ -155,6 +95,23 @@ class MTLSMiddleware:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Authentication error"
             )
+
+    def _load_ca_certificate(self) -> None:
+        """Load the CA certificate for client certificate verification."""
+        try:
+            with open(self.ca_cert_path, "rb") as f:
+                self.ca_cert_data = f.read()
+            logger.info(f"CA certificate loaded from {self.ca_cert_path}")
+        except Exception as e:
+            logger.error(f"Failed to load CA certificate: {e}")
+            raise
+
+    def _create_ssl_context(self) -> ssl.SSLContext:
+        """Create SSL context with mTLS verification."""
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.load_verify_locations(self.ca_cert_path)
+        return context
 
     def _extract_client_certificate(self, request: Request) -> Optional[bytes]:
         """Extract client certificate from request."""
@@ -192,7 +149,7 @@ class MTLSMiddleware:
         }
 
 
-class ConnectionLimitMiddleware:
+class ConnectionLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware for enforcing connection limits and single active connection.
 
@@ -200,38 +157,30 @@ class ConnectionLimitMiddleware:
     to the PC at a time, and manages connection queuing.
     """
 
-    def __init__(self, app: ASGIApp, max_connections: int = 1):
-        self.app = app
+    def __init__(self, app: ASGIApp, max_connections: int = 1) -> None:
+        super().__init__(app)
         self.max_connections = max_connections
         self.connection_manager = ConnectionManager()
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        # Convert ASGI scope to Request object for compatibility
-        request = Request(scope, receive)
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        """Process request with connection limit enforcement."""
+        # Only apply to WebSocket connections
+        if request.url.path != "/ws":
+            return await call_next(request)
 
         try:
-            # Only apply to WebSocket connections
-            if request.url.path != "/ws":
-                await self.app(scope, receive, send)
-                return
-
-            device_info = getattr(scope.get("state", {}), 'device_info', None)
+            device_info = getattr(request.state, 'device_info', None)
             if not device_info:
-                response = JSONResponse(
+                return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"detail": "Device authentication required"}
                 )
-                await response(scope, receive, send)
-                return
 
             # Check if device already has active connection
             if self.connection_manager.has_active_connection(device_info["device_id"]):
-                # Queue the connection or reject with specific status
-                response = JSONResponse(
+                return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={
                         "error": "connection_limit_exceeded",
@@ -241,14 +190,11 @@ class ConnectionLimitMiddleware:
                         )
                     }
                 )
-                await response(scope, receive, send)
-                return
 
             # Check if maximum connections reached
             if self.connection_manager.get_active_connection_count() >= self.max_connections:
-                # Add to queue
                 queue_position = self.connection_manager.add_to_queue(device_info)
-                response = JSONResponse(
+                return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={
                         "error": "max_connections_reached",
@@ -256,14 +202,13 @@ class ConnectionLimitMiddleware:
                         "queue_position": queue_position
                     }
                 )
-                await response(scope, receive, send)
-                return
 
             # Register connection
             self.connection_manager.register_connection(device_info["device_id"], device_info)
 
             try:
-                await self.app(scope, receive, send)
+                response = await call_next(request)
+                return response
             finally:
                 # Clean up connection on response completion
                 self.connection_manager.unregister_connection(device_info["device_id"])
@@ -272,46 +217,43 @@ class ConnectionLimitMiddleware:
             raise
         except Exception as e:
             logger.error(f"Connection limit middleware error: {e}")
-            response = JSONResponse(
+            raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "Connection management error"}
+                detail="Connection management error"
             )
-            await response(scope, receive, send)
 
 
-class SecurityHeadersMiddleware:
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Middleware for adding security headers to all responses.
     """
 
-    def __init__(self, app: ASGIApp):
-        self.app = app
+    def __init__(self, app: ASGIApp) -> None:
+        super().__init__(app)
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        """Add security headers to response."""
+        response = await call_next(request)
 
-        # Custom send wrapper to add headers
-        async def send_wrapper(message):
-            if message["type"] == "http.response.start":
-                # Add security headers
-                headers = dict(message.get("headers", []))
-                headers.update({
-                    b"x-content-type-options": b"nosniff",
-                    b"x-frame-options": b"DENY",
-                    b"x-xss-protection": b"1; mode=block",
-                    b"strict-transport-security": b"max-age=31536000; includeSubDomains",
-                    b"referrer-policy": b"strict-origin-when-cross-origin",
-                    b"content-security-policy": b"default-src 'self'"
-                })
-                message["headers"] = [(k, v) for k, v in headers.items()]
-            await send(message)
+        # Add security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https:;"
+        )
 
-        await self.app(scope, receive, send_wrapper)
+        return response
 
 
-class RateLimitMiddleware:
+class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware for rate limiting API requests and connection attempts.
 
@@ -323,6 +265,10 @@ class RateLimitMiddleware:
     - Persistent tracking of failed attempts
     """
 
+    # Constants for exponential backoff
+    BACKOFF_BASE = 2
+    BACKOFF_CACHE_SIZE = 10
+
     def __init__(
         self,
         app: ASGIApp,
@@ -331,8 +277,8 @@ class RateLimitMiddleware:
         connection_window_seconds: int = 60,
         backoff_multiplier: float = 2.0,
         max_backoff_seconds: int = 300
-    ):
-        self.app = app
+    ) -> None:
+        super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.max_connection_attempts = max_connection_attempts
         self.connection_window_seconds = connection_window_seconds
@@ -347,19 +293,40 @@ class RateLimitMiddleware:
         self.failed_attempts: Dict[str, int] = {}
         self.blocked_until: Dict[str, datetime] = {}
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
+        # Precompute exponential backoff values for performance
+        self._backoff_cache: Dict[int, int] = self._build_backoff_cache()
 
-        # Convert ASGI scope to Request object for compatibility
-        request = Request(scope, receive)
+    def _build_backoff_cache(self) -> Dict[int, int]:
+        """Precompute exponential backoff values for performance."""
+        cache = {}
+        for i in range(self.BACKOFF_CACHE_SIZE):
+            backoff = min(
+                int(self.BACKOFF_BASE ** i * self.backoff_multiplier),
+                self.max_backoff_seconds
+            )
+            cache[i] = backoff
+        return cache
+
+    def _get_backoff_from_cache(self, attempts: int) -> int:
+        """Get backoff time using cache for common values."""
+        if attempts < self.BACKOFF_CACHE_SIZE:
+            return self._backoff_cache[attempts]
+        # Compute for values beyond cache
+        return min(
+            int(self.BACKOFF_BASE ** attempts * self.backoff_multiplier),
+            self.max_backoff_seconds
+        )
+
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        """Process request with rate limiting."""
         client_ip = self._get_client_ip(request)
 
         # Check if client is blocked due to excessive failed attempts
         if self._is_blocked(client_ip):
             remaining_seconds = self._get_remaining_block_time(client_ip)
-            response = JSONResponse(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
                     "detail": "Too many failed connection attempts",
@@ -371,14 +338,14 @@ class RateLimitMiddleware:
                     "X-RateLimit-Type": "connection_attempts"
                 }
             )
-            await response(scope, receive, send)
-            return
 
         # Check connection attempt rate limiting for WebSocket connections
         if request.url.path == "/ws":
             if not self._check_connection_attempt_limit(client_ip):
-                backoff_time = self._calculate_backoff_time(client_ip)
-                response = JSONResponse(
+                backoff_time = self._get_backoff_from_cache(
+                    self.failed_attempts.get(client_ip, 0)
+                )
+                return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={
                         "detail": "Connection attempt rate limit exceeded",
@@ -391,8 +358,6 @@ class RateLimitMiddleware:
                         "X-RateLimit-Type": "connection_attempts"
                     }
                 )
-                await response(scope, receive, send)
-                return
 
             # Record connection attempt
             self._record_connection_attempt(client_ip)
@@ -417,7 +382,7 @@ class RateLimitMiddleware:
             self.request_counts[client_ip][current_minute] = 0
 
         if self.request_counts[client_ip][current_minute] >= self.requests_per_minute:
-            response = JSONResponse(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
                     "detail": "Rate limit exceeded",
@@ -428,40 +393,30 @@ class RateLimitMiddleware:
                     "X-RateLimit-Type": "request_rate"
                 }
             )
-            await response(scope, receive, send)
-            return
 
         # Increment request count
         self.request_counts[client_ip][current_minute] += 1
 
-        # Custom send wrapper to add rate limit headers
-        async def send_wrapper(message):
-            if message["type"] == "http.response.start":
-                headers = dict(message.get("headers", []))
-                headers.update({
-                    b"x-ratelimit-limit": str(self.requests_per_minute).encode(),
-                    b"x-ratelimit-remaining": str(
-                        max(0, self.requests_per_minute - self.request_counts[client_ip][current_minute])
-                    ).encode(),
-                    b"x-ratelimit-reset": str(
-                        int((datetime.utcnow().replace(second=0, microsecond=0) +
-                             timedelta(minutes=1)).timestamp())
-                    ).encode()
-                })
+        # Process request and add rate limit headers
+        response = await call_next(request)
 
-                # Add connection attempt headers for WebSocket connections
-                if request.url.path == "/ws":
-                    attempts = self._get_attempts_in_window(client_ip)
-                    headers.update({
-                        b"x-connection-attempts": str(attempts).encode(),
-                        b"x-connection-limit": str(self.max_connection_attempts).encode(),
-                        b"x-connection-window": str(self.connection_window_seconds).encode()
-                    })
+        # Add rate limit headers
+        response.headers["X-RateLimit-Limit"] = str(self.requests_per_minute)
+        response.headers["X-RateLimit-Remaining"] = str(
+            max(0, self.requests_per_minute - self.request_counts[client_ip][current_minute])
+        )
+        reset_time = int((datetime.utcnow().replace(second=0, microsecond=0) +
+                         timedelta(minutes=1)).timestamp())
+        response.headers["X-RateLimit-Reset"] = str(reset_time)
 
-                message["headers"] = [(k, v) for k, v in headers.items()]
-            await send(message)
+        # Add connection attempt headers for WebSocket connections
+        if request.url.path == "/ws":
+            attempts = self._get_attempts_in_window(client_ip)
+            response.headers["X-Connection-Attempts"] = str(attempts)
+            response.headers["X-Connection-Limit"] = str(self.max_connection_attempts)
+            response.headers["X-Connection-Window"] = str(self.connection_window_seconds)
 
-        await self.app(scope, receive, send_wrapper)
+        return response
 
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address from request."""
@@ -528,7 +483,7 @@ class RateLimitMiddleware:
 
         return len(self.connection_attempts[client_ip])
 
-    def record_failed_connection(self, client_ip: str):
+    def record_failed_connection(self, client_ip: str) -> None:
         """
         Record a failed connection attempt and apply exponential backoff.
 
@@ -540,11 +495,8 @@ class RateLimitMiddleware:
 
         self.failed_attempts[client_ip] += 1
 
-        # Calculate backoff time with exponential increase
-        backoff_seconds = min(
-            int(2 ** self.failed_attempts[client_ip] * self.backoff_multiplier),
-            self.max_backoff_seconds
-        )
+        # Calculate backoff time using cache for performance
+        backoff_seconds = self._get_backoff_from_cache(self.failed_attempts[client_ip])
 
         # Block client until backoff time expires
         self.blocked_until[client_ip] = datetime.utcnow() + timedelta(seconds=backoff_seconds)

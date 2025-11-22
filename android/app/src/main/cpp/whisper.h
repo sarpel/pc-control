@@ -9,7 +9,11 @@ extern "C" {
 #endif
 
     struct whisper_context;
-    struct whisper_full_params;
+
+    struct whisper_full_params {
+        int strategy;
+        bool print_progress;
+    };
 
     struct whisper_context * whisper_init_from_file(const char * path_model);
     void whisper_free(struct whisper_context * ctx);

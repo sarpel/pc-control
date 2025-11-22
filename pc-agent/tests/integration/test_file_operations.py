@@ -45,7 +45,10 @@ def temp_test_files(tmp_path):
     sub_dir.mkdir()
     (sub_dir / "nested.txt").write_text("Nested file content")
 
-    return test_dir
+    yield test_dir
+    
+    # Cleanup is handled by tmp_path fixture, but we can explicitly clean up if needed
+    # shutil.rmtree(test_dir)
 
 
 @pytest.mark.asyncio

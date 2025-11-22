@@ -1,10 +1,12 @@
 package com.pccontrol.voice.audio
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
 import java.io.*
+import java.net.URL
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -26,8 +28,8 @@ class SpeechToTextService private constructor(
     private var whisperModel: WhisperModel? = null
 
     companion object {
-        private const val MODEL_NAME = "whisper-base-tr.bin"
-        private const val MODEL_VERSION = "base-tr"
+        private const val MODEL_NAME = "ggml-base.bin"
+        private const val MODEL_VERSION = "base"
         private const val LANGUAGE = "tr"
         private const val DEFAULT_THREADS = 2
         private const val MAX_AUDIO_LENGTH_SECONDS = 30
@@ -244,22 +246,24 @@ class SpeechToTextService private constructor(
     private suspend fun downloadModel(modelFile: File) {
         withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-tr.bin")
-                val connection = url.openConnection()
-                connection.connect()
-                
-                val input = BufferedInputStream(url.openStream())
-                val output = FileOutputStream(modelFile)
-                
-                val data = ByteArray(1024)
-                var count: Int
-                while (input.read(data).also { count = it } != -1) {
-                    output.write(data, 0, count)
+                val url = URL("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin")
+                val connection = url.openConnection().apply {
+                    connectTimeout = 10_000  // 10 seconds to establish connection
+                    readTimeout = 30_000     // 30 seconds to read data
                 }
-                
-                output.flush()
-                output.close()
-                input.close()
+                // Note: getInputStream() implicitly calls connect()
+
+                BufferedInputStream(connection.getInputStream()).use { input ->
+                    FileOutputStream(modelFile).use { output ->
+                        // 8KB buffer for efficient large file downloads (model is ~75MB)
+                        val buffer = ByteArray(8 * 1024)
+                        var count: Int
+                        while (input.read(buffer).also { count = it } != -1) {
+                            output.write(buffer, 0, count)
+                        }
+                        output.flush()
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("SpeechToTextService", "Error downloading model", e)
                 throw e
@@ -268,9 +272,23 @@ class SpeechToTextService private constructor(
     }
 
     private fun getAudioDuration(audioFile: File): Int {
-        // This would use MediaMetadataRetriever to get duration
-        // For now, return a default
-        return 10 // 10 seconds default
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(audioFile.absolutePath)
+                val duration = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+                )
+                val durationMs = duration?.toLongOrNull() ?: 0L
+                (durationMs / 1000).toInt() // Convert to seconds
+            } finally {
+                retriever.release()
+            }
+        } catch (e: Exception) {
+            Log.w("SpeechToTextService", "Could not get audio duration: ${e.message}")
+            // Return reasonable default for unknown duration
+            10
+        }
     }
 
     private fun createTempAudioFile(audioData: ByteArray, sampleRate: Int): File {
@@ -426,16 +444,16 @@ class SpeechToTextService private constructor(
             if (contextPtr == 0L) {
                 return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
             }
-            
+
             return try {
                 val audioFile = File(audioPath)
                 if (!audioFile.exists()) {
                     return WhisperTranscriptionResult("", 0f, language, 0, emptyList())
                 }
-                
+
                 val audioData = readAudioFileToFloatArray(audioFile)
                 val text = fullTranscribe(contextPtr, audioData)
-                
+
                 // Parse result if it's JSON or structured, otherwise assume plain text
                 // For now assuming plain text return from JNI
                 WhisperTranscriptionResult(text, 1.0f, language, (audioData.size / 16000.0 * 1000).toLong(), emptyList())
@@ -452,7 +470,7 @@ class SpeechToTextService private constructor(
             val startOffset = if (file.name.endsWith(".wav", ignoreCase = true) && bytes.size > 44) 44 else 0
             val shortCount = (bytes.size - startOffset) / 2
             val floatArray = FloatArray(shortCount)
-            
+
             for (i in 0 until shortCount) {
                 val byteIndex = startOffset + i * 2
                 if (byteIndex + 1 < bytes.size) {

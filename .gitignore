@@ -99,6 +99,16 @@ htmlcov/
 *.bak
 *.cache
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# P12/PKCS12 keystores (contains sensitive private keys)
+*.p12
+*.pfx
 
 .serena/
 .specify/

@@ -12,7 +12,7 @@ from fastapi import status
 
 
 @pytest.mark.asyncio
-async def test_find_files_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_find_files_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/system/find-files endpoint."""
     payload = {
         "query": "test.txt",
@@ -20,7 +20,7 @@ async def test_find_files_endpoint(client: AsyncClient, authenticated_headers: d
         "max_results": 10
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/system/find-files",
         json=payload,
         headers=authenticated_headers
@@ -34,9 +34,9 @@ async def test_find_files_endpoint(client: AsyncClient, authenticated_headers: d
 
 
 @pytest.mark.asyncio
-async def test_system_info_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_system_info_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test GET /api/v1/system/info endpoint."""
-    response = await client.get(
+    response = await async_client.get(
         "/api/v1/system/info",
         headers=authenticated_headers
     )
@@ -51,15 +51,16 @@ async def test_system_info_endpoint(client: AsyncClient, authenticated_headers: 
 
 
 @pytest.mark.asyncio
-async def test_delete_file_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_delete_file_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test DELETE /api/v1/system/file endpoint."""
     payload = {
         "file_path": "C:/Users/test_file.txt",
         "confirmed": True
     }
 
-    response = await client.delete(
-        "/api/v1/system/file",
+    response = await async_client.request(
+        "DELETE",
+        "/api/v1/system/files",
         json=payload,
         headers=authenticated_headers
     )
@@ -69,26 +70,29 @@ async def test_delete_file_endpoint(client: AsyncClient, authenticated_headers: 
 
 
 @pytest.mark.asyncio
-async def test_delete_file_requires_confirmation(client: AsyncClient, authenticated_headers: dict):
+async def test_delete_file_requires_confirmation(async_client: AsyncClient, authenticated_headers: dict):
     """Test that system directory deletions require confirmation."""
     payload = {
         "file_path": "C:/Windows/System32/test.dll",
         "confirmed": False
     }
 
-    response = await client.delete(
-        "/api/v1/system/file",
+    response = await async_client.request(
+        "DELETE",
+        "/api/v1/system/files",
         json=payload,
         headers=authenticated_headers
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     data = response.json()
-    assert "confirmation" in data["error"].lower()
+    # Check message in structured error response
+    error_msg = data["error"]["message"] if "message" in data["error"] else str(data["error"])
+    assert "confirmation" in error_msg.lower()
 
 
 @pytest.mark.asyncio
-async def test_find_files_invalid_path(client: AsyncClient, authenticated_headers: dict):
+async def test_find_files_invalid_path(async_client: AsyncClient, authenticated_headers: dict):
     """Test find files with invalid path returns error."""
     payload = {
         "query": "test.txt",
@@ -96,7 +100,7 @@ async def test_find_files_invalid_path(client: AsyncClient, authenticated_header
         "max_results": 10
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/system/find-files",
         json=payload,
         headers=authenticated_headers
@@ -106,21 +110,21 @@ async def test_find_files_invalid_path(client: AsyncClient, authenticated_header
 
 
 @pytest.mark.asyncio
-async def test_system_operations_unauthorized(client: AsyncClient):
+async def test_system_operations_unauthorized(async_client: AsyncClient):
     """Test system operations without authentication returns 401."""
-    response = await client.get("/api/v1/system/info")
+    response = await async_client.get("/api/v1/system/info")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio
-async def test_launch_application_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_launch_application_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/system/launch endpoint."""
     payload = {
         "application": "notepad",
         "arguments": []
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/system/launch",
         json=payload,
         headers=authenticated_headers
@@ -132,14 +136,14 @@ async def test_launch_application_endpoint(client: AsyncClient, authenticated_he
 
 
 @pytest.mark.asyncio
-async def test_volume_control_endpoint(client: AsyncClient, authenticated_headers: dict):
+async def test_volume_control_endpoint(async_client: AsyncClient, authenticated_headers: dict):
     """Test POST /api/v1/system/volume endpoint."""
     payload = {
         "action": "set",
         "level": 50
     }
 
-    response = await client.post(
+    response = await async_client.post(
         "/api/v1/system/volume",
         json=payload,
         headers=authenticated_headers

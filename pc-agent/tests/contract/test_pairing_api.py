@@ -260,7 +260,7 @@ class TestPairingAPIContract:
         # Assert - Should be rejected
         assert fourth_initiate.status_code == status.HTTP_403_FORBIDDEN
         data = fourth_initiate.json()
-        assert "maximum" in data["detail"].lower()
+        assert "maximum" in data["error"]["message"].lower()
 
     @pytest.mark.asyncio
     async def test_pairing_code_is_unique_per_session(self, async_client: AsyncClient):
@@ -286,16 +286,4 @@ class TestPairingAPIContract:
         assert data1["pairing_id"] != data2["pairing_id"]
 
 
-@pytest.fixture
-async def async_client():
-    """
-    Fixture providing async HTTP client for testing.
 
-    Note: This will be properly configured in conftest.py
-    For now, this is a placeholder that will fail until implementation.
-    """
-    from fastapi.testclient import TestClient
-    from src.api.main import app
-
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client

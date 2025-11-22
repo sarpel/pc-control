@@ -37,7 +37,7 @@ except ImportError:
     SELENIUM_AVAILABLE = False
     logging.warning("Selenium not available. Browser control features will be limited.")
 
-from config.settings import get_settings
+from src.config.settings import get_settings
 from src.models.action import Action, ActionType as ModelActionType
 
 logger = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ class BrowserControlService:
                 options.add_argument("--window-size=1920,1080")
                 options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
-                if settings.debug_mode:
+                if settings.debug:
                     options.add_argument("--remote-debugging-port=9222")
 
                 self.driver = webdriver.Chrome(options=options)
